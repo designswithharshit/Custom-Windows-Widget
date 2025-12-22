@@ -1,0 +1,479 @@
+ Volume in drive E is New Volume
+ Volume Serial Number is 52AA-357D
+
+ Directory of E:\Useful APPS\WinWidget
+
+12/22/2025  10:35 PM    <DIR>          .
+12/22/2025  10:35 PM    <DIR>          ..
+12/22/2025  09:02 PM               149 .gitignore
+12/22/2025  08:06 PM           174,085 app.ico
+12/22/2025  08:02 PM           179,781 AppSetup.ico
+12/22/2025  09:24 PM    <DIR>          build
+12/22/2025  04:07 PM            56,197 default.jpg
+12/22/2025  10:29 PM    <DIR>          dist
+12/22/2025  10:29 PM    <DIR>          InstallReady
+12/22/2025  10:21 PM             1,093 LICENSE
+12/22/2025  10:35 PM                 0 list.txt
+12/22/2025  09:23 PM            16,283 main.py
+12/22/2025  09:35 PM    <DIR>          OutPut
+12/22/2025  10:21 PM             3,258 README.md
+12/22/2025  09:34 PM             3,482 Setup.iss
+12/22/2025  10:00 PM               140 version.json
+12/22/2025  08:14 PM        48,565,197 WinWidget.exe
+12/22/2025  09:24 PM               761 WinWidget.spec
+              12 File(s)     49,000,426 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git
+
+12/22/2025  10:31 PM                33 COMMIT_EDITMSG
+12/22/2025  10:04 PM               264 config
+12/22/2025  09:03 PM                73 description
+12/22/2025  10:21 PM               119 FETCH_HEAD
+12/22/2025  10:03 PM                21 HEAD
+12/22/2025  09:03 PM    <DIR>          hooks
+12/22/2025  10:31 PM             1,342 index
+12/22/2025  09:03 PM    <DIR>          info
+12/22/2025  09:03 PM    <DIR>          logs
+12/22/2025  10:31 PM    <DIR>          objects
+12/22/2025  10:21 PM                41 ORIG_HEAD
+12/22/2025  10:21 PM    <DIR>          refs
+               7 File(s)          1,893 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\hooks
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM               478 applypatch-msg.sample
+12/22/2025  09:03 PM               896 commit-msg.sample
+12/22/2025  09:03 PM             4,726 fsmonitor-watchman.sample
+12/22/2025  09:03 PM               189 post-update.sample
+12/22/2025  09:03 PM               424 pre-applypatch.sample
+12/22/2025  09:03 PM             1,649 pre-commit.sample
+12/22/2025  09:03 PM               416 pre-merge-commit.sample
+12/22/2025  09:03 PM             1,374 pre-push.sample
+12/22/2025  09:03 PM             4,898 pre-rebase.sample
+12/22/2025  09:03 PM               544 pre-receive.sample
+12/22/2025  09:03 PM             1,492 prepare-commit-msg.sample
+12/22/2025  09:03 PM             2,783 push-to-checkout.sample
+12/22/2025  09:03 PM             2,308 sendemail-validate.sample
+12/22/2025  09:03 PM             3,650 update.sample
+              14 File(s)         25,827 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\info
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM               240 exclude
+               1 File(s)            240 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\logs
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  10:31 PM             1,084 HEAD
+12/22/2025  10:21 PM    <DIR>          refs
+               1 File(s)          1,084 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\logs\refs
+
+12/22/2025  10:21 PM    <DIR>          .
+12/22/2025  10:21 PM    <DIR>          ..
+12/22/2025  10:03 PM    <DIR>          heads
+12/22/2025  10:21 PM    <DIR>          remotes
+               0 File(s)              0 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\logs\refs\heads
+
+12/22/2025  10:03 PM    <DIR>          .
+12/22/2025  10:03 PM    <DIR>          ..
+12/22/2025  10:31 PM               899 main
+               1 File(s)            899 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\logs\refs\remotes
+
+12/22/2025  10:21 PM    <DIR>          .
+12/22/2025  10:21 PM    <DIR>          ..
+12/22/2025  10:21 PM    <DIR>          origin
+               0 File(s)              0 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\logs\refs\remotes\origin
+
+12/22/2025  10:21 PM    <DIR>          .
+12/22/2025  10:21 PM    <DIR>          ..
+12/22/2025  10:21 PM               191 main
+               1 File(s)            191 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects
+
+12/22/2025  10:31 PM    <DIR>          .
+12/22/2025  10:31 PM    <DIR>          ..
+12/22/2025  09:03 PM    <DIR>          09
+12/22/2025  10:21 PM    <DIR>          0f
+12/22/2025  09:03 PM    <DIR>          1e
+12/22/2025  09:03 PM    <DIR>          1f
+12/22/2025  10:03 PM    <DIR>          21
+12/22/2025  10:03 PM    <DIR>          26
+12/22/2025  09:03 PM    <DIR>          27
+12/22/2025  10:21 PM    <DIR>          28
+12/22/2025  09:03 PM    <DIR>          2b
+12/22/2025  10:21 PM    <DIR>          39
+12/22/2025  10:03 PM    <DIR>          3b
+12/22/2025  09:03 PM    <DIR>          3f
+12/22/2025  09:03 PM    <DIR>          41
+12/22/2025  10:21 PM    <DIR>          48
+12/22/2025  09:03 PM    <DIR>          4c
+12/22/2025  10:22 PM    <DIR>          59
+12/22/2025  10:21 PM    <DIR>          64
+12/22/2025  10:03 PM    <DIR>          7d
+12/22/2025  10:31 PM    <DIR>          81
+12/22/2025  09:03 PM    <DIR>          83
+12/22/2025  10:31 PM    <DIR>          8b
+12/22/2025  10:21 PM    <DIR>          8e
+12/22/2025  10:21 PM    <DIR>          93
+12/22/2025  10:03 PM    <DIR>          97
+12/22/2025  10:03 PM    <DIR>          a1
+12/22/2025  09:03 PM    <DIR>          a2
+12/22/2025  10:31 PM    <DIR>          b9
+12/22/2025  10:03 PM    <DIR>          ba
+12/22/2025  10:03 PM    <DIR>          da
+12/22/2025  10:03 PM    <DIR>          e5
+12/22/2025  09:03 PM    <DIR>          f9
+12/22/2025  09:03 PM    <DIR>          ff
+12/22/2025  09:03 PM    <DIR>          info
+12/22/2025  09:03 PM    <DIR>          pack
+               0 File(s)              0 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\09
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM            26,471 b458a876fedfaae93d9bd8a95971960ad4ce43
+               1 File(s)         26,471 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\0f
+
+12/22/2025  10:21 PM    <DIR>          .
+12/22/2025  10:21 PM    <DIR>          ..
+12/22/2025  10:21 PM               785 3679cee0c4cb7e4b30831a0ff6fcb10a7acee3
+               1 File(s)            785 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\1e
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM             1,454 434404cff2b5312f9fdcb1ec41a1555bf2c141
+               1 File(s)          1,454 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\1f
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM               120 550d62445554a8cda444ca42a736d0aa35537e
+               1 File(s)            120 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\21
+
+12/22/2025  10:03 PM    <DIR>          .
+12/22/2025  10:03 PM    <DIR>          ..
+12/22/2025  10:03 PM               132 1ab8539dd29fc41dff2ee23049877949ee7af2
+               1 File(s)            132 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\26
+
+12/22/2025  10:03 PM    <DIR>          .
+12/22/2025  10:03 PM    <DIR>          ..
+12/22/2025  10:03 PM               355 d27a4b7a18ef7b88f715337f73970c85df536f
+               1 File(s)            355 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\27
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM        48,090,827 2afa92a9e5027ae84c2bd941d9ff8d8ab19709
+               1 File(s)     48,090,827 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\28
+
+12/22/2025  10:21 PM    <DIR>          .
+12/22/2025  10:21 PM    <DIR>          ..
+12/22/2025  10:21 PM               419 b70a81e79c54c152c20bc6444d5a8df7fbe9df
+               1 File(s)            419 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\2b
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM            37,601 60ae5e89227d642d5ba2ce261a679ed7749d3d
+               1 File(s)         37,601 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\39
+
+12/22/2025  10:21 PM    <DIR>          .
+12/22/2025  10:21 PM    <DIR>          ..
+12/22/2025  10:31 PM               658 1b93cc0660e5931d2fc39f0424bc152a4e1963
+               1 File(s)            658 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\3b
+
+12/22/2025  10:03 PM    <DIR>          .
+12/22/2025  10:03 PM    <DIR>          ..
+12/22/2025  10:03 PM        48,089,483 6510a33745ca109a78eb17a1d93685301d89d5
+               1 File(s)     48,089,483 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\3f
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM             5,992 8cf7f14234ab238d9e58b9d5c151ba29d1a267
+               1 File(s)          5,992 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\41
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM               139 98c18848afc4029932e96ae7170da8936c07d6
+               1 File(s)            139 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\48
+
+12/22/2025  10:21 PM    <DIR>          .
+12/22/2025  10:21 PM    <DIR>          ..
+12/22/2025  10:21 PM                85 7b1a2164c28b6b8d0a89a89eab497781e74410
+               1 File(s)             85 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\4c
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM                64 94e4f60fcdf6522781116e19d19adaf3e44b1e
+               1 File(s)             64 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\59
+
+12/22/2025  10:22 PM    <DIR>          .
+12/22/2025  10:22 PM    <DIR>          ..
+12/22/2025  10:22 PM               242 ee87c04eb019bedb5f912f2421d8bf373c4808
+               1 File(s)            242 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\64
+
+12/22/2025  10:21 PM    <DIR>          .
+12/22/2025  10:21 PM    <DIR>          ..
+12/22/2025  10:21 PM               824 e7a0c17e338ce1837837f37bcebcb6c9286844
+               1 File(s)            824 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\7d
+
+12/22/2025  10:03 PM    <DIR>          .
+12/22/2025  10:03 PM    <DIR>          ..
+12/22/2025  10:03 PM                64 702772516a2c87faac0611400a0e30df3eb479
+               1 File(s)             64 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\81
+
+12/22/2025  10:31 PM    <DIR>          .
+12/22/2025  10:31 PM    <DIR>          ..
+12/22/2025  10:31 PM               155 942cda9420365a867bdd568966f1fb61a1684e
+               1 File(s)            155 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\83
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM        49,821,324 67ae1d3eca0558fdce342539ac29c59812a22e
+               1 File(s)     49,821,324 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\8b
+
+12/22/2025  10:31 PM    <DIR>          .
+12/22/2025  10:31 PM    <DIR>          ..
+12/22/2025  10:31 PM               419 9aa5b3266aa8da0adecbfbd50f7d7191d61622
+               1 File(s)            419 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\8e
+
+12/22/2025  10:21 PM    <DIR>          .
+12/22/2025  10:21 PM    <DIR>          ..
+12/22/2025  10:21 PM                52 8fcc8ab018b2bef0fcde67b191f05b5510b321
+               1 File(s)             52 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\93
+
+12/22/2025  10:21 PM    <DIR>          .
+12/22/2025  10:21 PM    <DIR>          ..
+12/22/2025  10:31 PM             1,678 831710a7be2c216be8f94e4cb0de479e0539d6
+               1 File(s)          1,678 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\97
+
+12/22/2025  10:03 PM    <DIR>          .
+12/22/2025  10:03 PM    <DIR>          ..
+12/22/2025  10:03 PM        49,790,350 f2cbc3c0a278d22b17f4c914c114099f6922c3
+               1 File(s)     49,790,350 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\a1
+
+12/22/2025  10:03 PM    <DIR>          .
+12/22/2025  10:03 PM    <DIR>          ..
+12/22/2025  10:03 PM             6,006 6c86153e03175e317431370d1ce6f8f60494e8
+               1 File(s)          6,006 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\a2
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM               320 617c71cac0f4a0f6a0eb01f2df1d7d62c38cd3
+               1 File(s)            320 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\b9
+
+12/22/2025  10:31 PM    <DIR>          .
+12/22/2025  10:31 PM    <DIR>          ..
+12/22/2025  10:31 PM               179 7eacae6a3b7c6ad4577d9c41194900b175641d
+               1 File(s)            179 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\ba
+
+12/22/2025  10:03 PM    <DIR>          .
+12/22/2025  10:03 PM    <DIR>          ..
+12/22/2025  10:03 PM               165 83b7c354c2273f61a051e5935a3eec51ac696b
+               1 File(s)            165 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\da
+
+12/22/2025  10:03 PM    <DIR>          .
+12/22/2025  10:03 PM    <DIR>          ..
+12/22/2025  10:03 PM             1,485 e64281e8a25d543ee9708fa7286a050cf0b34a
+               1 File(s)          1,485 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\e5
+
+12/22/2025  10:03 PM    <DIR>          .
+12/22/2025  10:03 PM    <DIR>          ..
+12/22/2025  10:03 PM               657 09e8c0ea4879b82a2dc1c01efe73af05ebf55b
+12/22/2025  10:03 PM               192 12cdae2b6440dc16d3a472c5f3d644f71a5143
+               2 File(s)            849 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\f9
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM            37,769 eb440df7d5ccb80214a1675da7f9921228df0a
+               1 File(s)         37,769 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\ff
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+12/22/2025  09:03 PM               157 bd5f08c935882032447abcfe374c820b97f298
+               1 File(s)            157 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\info
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+               0 File(s)              0 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\objects\pack
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+               0 File(s)              0 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\refs
+
+12/22/2025  10:21 PM    <DIR>          .
+12/22/2025  10:21 PM    <DIR>          ..
+12/22/2025  10:31 PM    <DIR>          heads
+12/22/2025  10:21 PM    <DIR>          remotes
+12/22/2025  09:03 PM    <DIR>          tags
+               0 File(s)              0 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\refs\heads
+
+12/22/2025  10:31 PM    <DIR>          .
+12/22/2025  10:31 PM    <DIR>          ..
+12/22/2025  10:31 PM                41 main
+               1 File(s)             41 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\refs\remotes
+
+12/22/2025  10:21 PM    <DIR>          .
+12/22/2025  10:21 PM    <DIR>          ..
+12/22/2025  10:21 PM    <DIR>          origin
+               0 File(s)              0 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\refs\remotes\origin
+
+12/22/2025  10:21 PM    <DIR>          .
+12/22/2025  10:21 PM    <DIR>          ..
+12/22/2025  10:21 PM                41 main
+               1 File(s)             41 bytes
+
+ Directory of E:\Useful APPS\WinWidget\.git\refs\tags
+
+12/22/2025  09:03 PM    <DIR>          .
+12/22/2025  09:03 PM    <DIR>          ..
+               0 File(s)              0 bytes
+
+ Directory of E:\Useful APPS\WinWidget\build
+
+12/22/2025  09:24 PM    <DIR>          .
+12/22/2025  09:24 PM    <DIR>          ..
+12/22/2025  09:25 PM    <DIR>          WinWidget
+               0 File(s)              0 bytes
+
+ Directory of E:\Useful APPS\WinWidget\build\WinWidget
+
+12/22/2025  09:25 PM    <DIR>          .
+12/22/2025  09:25 PM    <DIR>          ..
+12/22/2025  09:25 PM           131,353 Analysis-00.toc
+12/22/2025  09:25 PM         1,443,565 base_library.zip
+12/22/2025  09:25 PM            51,975 EXE-00.toc
+12/22/2025  09:25 PM    <DIR>          localpycs
+12/22/2025  09:25 PM            50,201 PKG-00.toc
+12/22/2025  09:25 PM         2,747,252 PYZ-00.pyz
+12/22/2025  09:25 PM            53,190 PYZ-00.toc
+12/22/2025  09:25 PM             5,405 warn-WinWidget.txt
+12/22/2025  09:25 PM        48,111,277 WinWidget.pkg
+12/22/2025  09:25 PM           535,096 xref-WinWidget.html
+               9 File(s)     53,129,314 bytes
+
+ Directory of E:\Useful APPS\WinWidget\build\WinWidget\localpycs
+
+12/22/2025  09:25 PM    <DIR>          .
+12/22/2025  09:25 PM    <DIR>          ..
+12/22/2025  09:25 PM             5,437 pyimod01_archive.pyc
+12/22/2025  09:25 PM            34,019 pyimod02_importers.pyc
+12/22/2025  09:25 PM             7,032 pyimod03_ctypes.pyc
+12/22/2025  09:25 PM             1,939 pyimod04_pywin32.pyc
+12/22/2025  09:25 PM               360 struct.pyc
+               5 File(s)         48,787 bytes
+
+ Directory of E:\Useful APPS\WinWidget\dist
+
+12/22/2025  10:29 PM    <DIR>          .
+12/22/2025  10:29 PM    <DIR>          ..
+12/22/2025  09:25 PM        48,563,885 WinWidget.exe
+               1 File(s)     48,563,885 bytes
+
+ Directory of E:\Useful APPS\WinWidget\InstallReady
+
+12/22/2025  10:29 PM    <DIR>          .
+12/22/2025  10:29 PM    <DIR>          ..
+12/22/2025  08:06 PM           174,085 app.ico
+12/22/2025  04:07 PM            56,197 default.jpg
+12/22/2025  09:31 PM             1,091 LICENSE.txt
+12/22/2025  09:23 PM            16,283 main.py
+               4 File(s)        247,656 bytes
+
+ Directory of E:\Useful APPS\WinWidget\OutPut
+
+12/22/2025  09:35 PM    <DIR>          .
+12/22/2025  09:35 PM    <DIR>          ..
+12/22/2025  09:35 PM        50,408,280 WinWidget_Setup.exe
+               1 File(s)     50,408,280 bytes
+
+     Total Files Listed:
+              92 File(s)    397,345,187 bytes
+             161 Dir(s)  73,309,868,032 bytes free
