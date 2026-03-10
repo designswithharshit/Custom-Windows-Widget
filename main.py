@@ -12,7 +12,7 @@ from PySide6.QtCore import QPointF
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s', handlers=[logging.StreamHandler(sys.stdout)])
 
 # --- CONFIGURATION ---
-CURRENT_VERSION = "2.0"
+CURRENT_VERSION = "4.4"
 UPDATE_URL = "https://raw.githubusercontent.com/designswithharshit/Custom-Windows-Widget/main/version.json"
 APP_NAME = "WinWidget"
 APPDATA_DIR = os.path.join(os.environ.get("APPDATA", ""), APP_NAME)
