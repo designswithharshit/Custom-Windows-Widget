@@ -2,8 +2,11 @@ import sys, os, requests, json, win32gui, win32con, winreg, logging
 from PySide6.QtCore import Qt, QPoint, QThread, Signal
 from PySide6.QtWidgets import (QApplication, QWidget, QMenu, QSystemTrayIcon, 
                              QInputDialog, QFileDialog, QDialog, QLabel, 
-                             QVBoxLayout, QPushButton, QTextEdit, QSlider)
-from PySide6.QtGui import QPixmap, QIcon, QPainter, QPainterPath, QColor, QPen, QFont, QCursor, QTextListFormat, QTextCursor
+                             QVBoxLayout, QPushButton, QTextEdit, QSlider,)
+from PySide6.QtGui import QPixmap, QIcon, QPainter, QPainterPath, QColor, QPen, QFont, QCursor, QTextListFormat, QTextCursor, QPointFList
+import sys, os, requests, json, win32gui, win32con, winreg, logging, math
+from PySide6.QtCore import QPointF
+
 
 # --- LOGGING SETUP ---
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s', handlers=[logging.StreamHandler(sys.stdout)])
@@ -15,6 +18,7 @@ APP_NAME = "WinWidget"
 APPDATA_DIR = os.path.join(os.environ.get("APPDATA", ""), APP_NAME)
 os.makedirs(APPDATA_DIR, exist_ok=True)
 CONFIG_PATH = os.path.join(APPDATA_DIR, "config.json")
+COLOR_HISTORY_PATH = os.path.join(APPDATA_DIR, "colors.json")
 
 def resource_path(relative_path):
     try: return os.path.join(sys._MEIPASS, relative_path)
@@ -88,6 +92,136 @@ class ImageLoader(QThread):
                 self.loaded.emit(data, self.src)
         except Exception as e: 
             logging.error(f"Image load failed: {e}")
+
+from PySide6.QtGui import QConicalGradient, QRadialGradient
+
+class ColorWheel(QWidget):
+    colorChanged = Signal(QColor)
+    def __init__(self):
+        super().__init__()
+        self.setFixedSize(160, 160)
+        self.hue = 0; self.sat = 0; self.val = 255
+        self.setCursor(Qt.CrossCursor)
+
+    def paintEvent(self, e):
+        p = QPainter(self); p.setRenderHint(QPainter.Antialiasing)
+        r = self.rect(); cx, cy = r.width()/2, r.height()/2
+        
+        # Hue Gradient
+        conical = QConicalGradient(cx, cy, 0)
+        for i in range(7): conical.setColorAt(i/6.0, QColor.fromHsv(int(359*(i/6.0)), 255, 255))
+        p.setBrush(conical); p.setPen(Qt.NoPen); p.drawEllipse(r)
+        
+        # Saturation Fade (White in center)
+        radial = QRadialGradient(cx, cy, r.width()/2)
+        radial.setColorAt(0, QColor(255, 255, 255, 255))
+        radial.setColorAt(1, QColor(255, 255, 255, 0))
+        p.setBrush(radial); p.drawEllipse(r)
+        
+        # Target Marker
+        angle = math.radians(self.hue)
+        dist = (self.sat / 255) * (r.width() / 2)
+        mx, my = cx + math.cos(angle)*dist, cy - math.sin(angle)*dist
+        p.setBrush(Qt.NoBrush); p.setPen(QPen(Qt.black, 2)); p.drawEllipse(QPointF(mx, my), 5, 5)
+        p.setPen(QPen(Qt.white, 1)); p.drawEllipse(QPointF(mx, my), 4, 4)
+
+    def mouseMoveEvent(self, e): self.update_color(e.position().toPoint())
+    def mousePressEvent(self, e): self.update_color(e.position().toPoint())
+    
+    def update_color(self, pos):
+        cx, cy = self.width()/2, self.height()/2
+        dx, dy = pos.x() - cx, pos.y() - cy
+        self.hue = int(math.degrees(math.atan2(-dy, dx)) % 360)
+        self.sat = min(255, int((math.hypot(dx, dy) / (self.width()/2)) * 255))
+        self.colorChanged.emit(QColor.fromHsv(self.hue, self.sat, self.val))
+        self.update()
+
+class ModernColorPicker(QDialog):
+    def __init__(self, initial=Qt.white, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.current_color = QColor(initial)
+        
+        self.setStyleSheet("""
+            QDialog > QWidget { background: #fdfdfd; border: 1px solid #ccc; border-radius: 8px; }
+            QPushButton { background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; padding: 5px 15px; font-weight: bold; color: #333; }
+            QPushButton:hover { background: #e0e0e0; }
+            QPushButton#btnOK { background: #007aff; color: white; border: none; }
+            QPushButton#btnOK:hover { background: #005bb5; }
+        """)
+        
+        main_layout = QVBoxLayout(self)
+        container = QWidget(self); main_layout.addWidget(container)
+        layout = QVBoxLayout(container); layout.setContentsMargins(15, 15, 15, 15)
+        
+        # Color Wheel
+        self.wheel = ColorWheel()
+        self.wheel.colorChanged.connect(self.sync_color)
+        layout.addWidget(self.wheel, alignment=Qt.AlignCenter)
+        
+        # Brightness Slider
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.setRange(0, 255); self.slider.setValue(255)
+        self.slider.setStyleSheet("QSlider::groove:horizontal { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #000, stop:1 #fff); height: 10px; border-radius: 5px; } QSlider::handle:horizontal { background: white; border: 2px solid #999; width: 14px; margin: -3px 0; border-radius: 7px; }")
+        self.slider.valueChanged.connect(self.update_brightness)
+        layout.addWidget(self.slider)
+        
+        # Preview & History
+        bot_layout = QHBoxLayout()
+        self.preview = QLabel()
+        self.preview.setFixedSize(30, 30)
+        bot_layout.addWidget(self.preview)
+        
+        self.history_layout = QHBoxLayout(); self.history_layout.setSpacing(2)
+        bot_layout.addLayout(self.history_layout)
+        bot_layout.addStretch()
+        layout.addLayout(bot_layout)
+        
+        # Buttons
+        btn_layout = QHBoxLayout()
+        btn_cancel = QPushButton("Cancel"); btn_cancel.clicked.connect(self.reject)
+        btn_ok = QPushButton("OK"); btn_ok.setObjectName("btnOK"); btn_ok.clicked.connect(self.accept)
+        btn_layout.addStretch(); btn_layout.addWidget(btn_cancel); btn_layout.addWidget(btn_ok)
+        layout.addLayout(btn_layout)
+
+        self.load_history()
+        self.sync_color(self.current_color)
+
+    def sync_color(self, c):
+        self.current_color = c
+        self.preview.setStyleSheet(f"background-color: {c.name()}; border: 1px solid #aaa; border-radius: 4px;")
+        
+    def update_brightness(self, val):
+        self.wheel.val = val
+        self.wheel.colorChanged.emit(QColor.fromHsv(self.wheel.hue, self.wheel.sat, val))
+
+    def load_history(self):
+        history = []
+        if os.path.exists(COLOR_HISTORY_PATH):
+            try: history = json.load(open(COLOR_HISTORY_PATH, "r"))
+            except: pass
+        for hex_code in history[:8]:
+            btn = QPushButton(); btn.setFixedSize(20, 20)
+            btn.setStyleSheet(f"background-color: {hex_code}; border: 1px solid #ddd; border-radius: 2px;")
+            btn.clicked.connect(lambda _, c=hex_code: self.sync_color(QColor(c)))
+            self.history_layout.addWidget(btn)
+            
+    def save_history(self):
+        history = [self.current_color.name()]
+        if os.path.exists(COLOR_HISTORY_PATH):
+            try: history += json.load(open(COLOR_HISTORY_PATH, "r"))
+            except: pass
+        history = list(dict.fromkeys(history))[:8] # Keep unique, max 8
+        json.dump(history, open(COLOR_HISTORY_PATH, "w"))
+
+    @classmethod
+    def getColor(cls, initial=Qt.white, parent=None):
+        dlg = cls(initial, parent)
+        if dlg.exec():
+            dlg.save_history()
+            return dlg.current_color
+        return QColor() # Invalid if canceled
 
 # --- FLOATING TOOLBAR ---
 from PySide6.QtWidgets import QHBoxLayout
@@ -454,6 +588,7 @@ from PySide6.QtGui import QTextCharFormat, QFont, QColor
 from PySide6.QtCore import Qt
 
 class FloatingToolbar(QWidget):
+
     def __init__(self, text_edit):
         super().__init__()
         self.text_edit = text_edit
@@ -511,22 +646,49 @@ class FloatingToolbar(QWidget):
         elif action == 'strike': fmt.setFontStrikeOut(not self.text_edit.currentCharFormat().fontStrikeOut())
         elif action == 'h1': fmt.setFontPointSize(18); fmt.setFontWeight(QFont.Bold)
         elif action == 'color':
-            color = QColorDialog.getColor(Qt.black, self, "Pick Color", options=QColorDialog.DontUseNativeDialog)
-            if color.isValid(): self.text_edit.setTextColor(color)
+            self.show_color_menu()
             return
+            
         self.text_edit.mergeCurrentCharFormat(fmt)
 
-    def apply_format(self, action):
+    def show_color_menu(self):
+        menu = QMenu(self)
+        menu.setWindowFlags(Qt.Popup | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint)
+        menu.setAttribute(Qt.WA_TranslucentBackground)
+        
+        menu.setStyleSheet("""
+            QMenu { background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 5px; }
+            QMenu::item { padding: 6px 25px 6px 10px; border-radius: 4px; color: #37352f; font-family: 'Segoe UI', sans-serif; font-weight: 500; }
+            QMenu::item:selected { background-color: #f1f1ef; }
+            QMenu::separator { height: 1px; background: #e0e0e0; margin: 4px 10px; }
+        """)
+
+        colors = {
+            "Default (White)": "#ececec", "Gray": "#9b9a97", "Brown": "#64473a",
+            "Orange": "#d9730d", "Yellow": "#dfab01", "Green": "#0f7b6c",
+            "Blue": "#0b6e99", "Purple": "#6940a5", "Pink": "#ad1a72", "Red": "#e03e3e"
+        }
+
+        for name, hex_code in colors.items():
+            pix = QPixmap(14, 14); pix.fill(QColor(hex_code))
+            action = menu.addAction(QIcon(pix), name)
+            action.triggered.connect(lambda checked=False, c=hex_code: self.set_text_color(c))
+
+        # Add the custom color option at the bottom
+        menu.addSeparator()
+        custom_action = menu.addAction("🌈 More Colors...")
+        custom_action.triggered.connect(self.open_custom_text_color)
+
+        menu.exec(QCursor.pos())
+
+    def open_custom_text_color(self):
+        color = ModernColorPicker.getColor(Qt.black, self)
+        if color.isValid():
+            self.set_text_color(color.name())
+
+    def set_text_color(self, hex_color):
         fmt = QTextCharFormat()
-        if action == 'bold': fmt.setFontWeight(QFont.Bold if self.text_edit.currentCharFormat().fontWeight() != QFont.Bold else QFont.Normal)
-        elif action == 'italic': fmt.setFontItalic(not self.text_edit.currentCharFormat().fontItalic())
-        elif action == 'strike': fmt.setFontStrikeOut(not self.text_edit.currentCharFormat().fontStrikeOut())
-        elif action == 'h1': fmt.setFontPointSize(18); fmt.setFontWeight(QFont.Bold)
-        elif action == 'color':
-            # This flag forces the modern Qt UI instead of the Windows native dialog
-            color = QColorDialog.getColor(Qt.white, self, "Pick Color", options=QColorDialog.DontUseNativeDialog)
-            if color.isValid(): self.text_edit.setTextColor(color)
-            return
+        fmt.setForeground(QColor(hex_color))
         self.text_edit.mergeCurrentCharFormat(fmt)
 
 from PySide6.QtWidgets import QHBoxLayout, QColorDialog, QPushButton, QWidget, QInputDialog, QMenu
@@ -614,17 +776,17 @@ class NoteWidget(BaseWidget):
         self.controller.save_all()
 
     def change_text_color(self):
-        from PySide6.QtWidgets import QColorDialog
-        color = QColorDialog.getColor(Qt.white, self)
+        color = ModernColorPicker.getColor(Qt.white, self)
         if color.isValid():
             self.text_edit.setTextColor(color)
             self.controller.save_all()
 
     def change_bg_color(self):
-        from PySide6.QtWidgets import QColorDialog
-        color = QColorDialog.getColor(QColor(self.bg_color), self, options=QColorDialog.ShowAlphaChannel)
+        color = ModernColorPicker.getColor(QColor(self.bg_color), self)
         if color.isValid():
-            self.bg_color = color.name(QColor.HexArgb) # Supports transparency
+            # Apply slight transparency to the picked background color
+            color.setAlpha(230) 
+            self.bg_color = color.name(QColor.HexArgb)
             self.repaint()
             self.controller.save_all()
 
