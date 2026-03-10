@@ -8,7 +8,7 @@ from PySide6.QtGui import QPixmap, QIcon, QPainter, QPainterPath, QColor, QPen, 
 # --- CONFIGURATION ---
 CURRENT_VERSION = "1.0"
 # IMPORTANT: Replace this with your raw GitHub JSON link
-UPDATE_URL = "https://raw.githubusercontent.com/designswithharshit/Custom-Windows-Widget/main/version.json"
+UPDATE_URL = "https://raw.githubusercontent.com/designswithharshit/Custom-Windows-Widget/main/"
 
 # --- RESOURCE PATH FIXER ---
 def resource_path(relative_path):
