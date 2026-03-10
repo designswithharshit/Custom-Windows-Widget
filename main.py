@@ -1,223 +1,39 @@
-import sys, os, requests, json, win32gui, win32con, winreg, webbrowser
+import sys, os, requests, json, win32gui, win32con, winreg, logging
+from PySide6.QtCore import Qt, QPoint, QThread, Signal
 from PySide6.QtWidgets import (QApplication, QWidget, QMenu, QSystemTrayIcon, 
-                             QInputDialog, QSlider, QFileDialog, QDialog, QLabel, 
-                             QVBoxLayout, QPushButton, QMessageBox)
-from PySide6.QtCore import Qt, QSize, QPoint, QThread, Signal, QTimer
-from PySide6.QtGui import QPixmap, QIcon, QPainter, QPainterPath, QColor, QPen, QFont
+                             QInputDialog, QFileDialog, QDialog, QLabel, 
+                             QVBoxLayout, QPushButton, QTextEdit, QSlider)
+from PySide6.QtGui import QPixmap, QIcon, QPainter, QPainterPath, QColor, QPen, QFont, QCursor, QTextListFormat, QTextCursor
+
+# --- LOGGING SETUP ---
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s', handlers=[logging.StreamHandler(sys.stdout)])
 
 # --- CONFIGURATION ---
-CURRENT_VERSION = "1.0"
-# IMPORTANT: Replace this with your raw GitHub JSON link
-UPDATE_URL = "https://raw.githubusercontent.com/designswithharshit/Custom-Windows-Widget/main/"
-
-# --- RESOURCE PATH FIXER ---
-def resource_path(relative_path):
-    try: base_path = sys._MEIPASS
-    except Exception: base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
-
-# --- CONSTANTS ---
+CURRENT_VERSION = "2.0"
+UPDATE_URL = "https://raw.githubusercontent.com/designswithharshit/Custom-Windows-Widget/main/version.json"
 APP_NAME = "WinWidget"
 APPDATA_DIR = os.path.join(os.environ.get("APPDATA", ""), APP_NAME)
-if not os.path.exists(APPDATA_DIR): os.makedirs(APPDATA_DIR)
+os.makedirs(APPDATA_DIR, exist_ok=True)
 CONFIG_PATH = os.path.join(APPDATA_DIR, "config.json")
 
-# Assets
+def resource_path(relative_path):
+    try: return os.path.join(sys._MEIPASS, relative_path)
+    except Exception: return os.path.abspath(relative_path)
+
 ICON_PATH = resource_path("app.ico")
-DEFAULT_IMG_PATH = resource_path("default.jpg")
-HEADERS = {'User-Agent': 'Mozilla/5.0'}
+DEFAULT_IMG = resource_path("default.jpg")
+
 MENU_STYLE = """
-    QMenu { background-color: rgba(30, 30, 30, 240); color: white; border: 1px solid rgba(255, 255, 255, 30); border-radius: 10px; padding: 5px; }
-    QMenu::item { padding: 8px 25px; border-radius: 5px; }
-    QMenu::item:selected { background-color: rgba(255, 255, 255, 40); }
-    QMenu::separator { height: 1px; background: rgba(255, 255, 255, 20); margin: 5px 10px; }
+    QMenu { background-color: #1e1e1e; color: #ececec; border: 1px solid #333; border-radius: 6px; padding: 4px; font-family: 'Segoe UI'; font-size: 13px; }
+    QMenu::item { padding: 6px 25px 6px 15px; border-radius: 4px; }
+    QMenu::item:selected { background-color: #2c2c2c; }
+    QMenu::separator { height: 1px; background: #333; margin: 4px 10px; }
 """
 
-# --- AUTO-UPDATE WORKER ---
-class UpdateChecker(QThread):
-    found_update = Signal(str, str) # version, url
-
-    def run(self):
-        try:
-            # 1. Fetch JSON from GitHub
-            response = requests.get(UPDATE_URL, timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                latest = data.get("version", "0.0")
-                url = data.get("url", "")
-                
-                # 2. Compare Versions
-                if float(latest) > float(CURRENT_VERSION):
-                    self.found_update.emit(latest, url)
-        except: pass
-
-# --- WELCOME SCREEN ---
-class WelcomeScreen(QDialog):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Welcome")
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        self.resize(500, 350)
-        
-        layout = QVBoxLayout(self); layout.setContentsMargins(20,20,20,20)
-        self.bg = QLabel(self); self.bg.setStyleSheet("background-color: rgba(20, 20, 20, 230); border: 1px solid #444; border-radius: 15px;")
-        self.bg.setGeometry(0, 0, 500, 350); self.bg.lower()
-
-        title = QLabel("WinWidget is Active!", self); title.setStyleSheet("color: white; font-size: 24px; font-weight: bold;"); title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title)
-
-        info = QLabel("1. The app runs in your System Tray (Bottom Right).\n2. Right-Click the Tray Icon to 'Edit Layout'.\n3. Right-Click any widget to change its image.", self)
-        info.setStyleSheet("color: #ccc; font-size: 14px; margin: 15px;"); info.setWordWrap(True); info.setAlignment(Qt.AlignLeft)
-        layout.addWidget(info)
-        
-        btn = QPushButton("Got it"); btn.setStyleSheet("background: #E60023; color: white; padding: 8px; border-radius: 5px;")
-        btn.clicked.connect(self.accept); layout.addWidget(btn)
-
-# --- WORKER ---
-class ImageLoader(QThread):
-    loaded = Signal(QPixmap, str)
-    def __init__(self, source): super().__init__(); self.source = source
-    def run(self):
-        try:
-            pix = QPixmap()
-            if os.path.isfile(self.source): pix.load(self.source)
-            else: 
-                r = requests.get(self.source, headers=HEADERS, timeout=10)
-                pix.loadFromData(r.content)
-            if not pix.isNull(): self.loaded.emit(pix, self.source)
-        except: pass
-
-# --- WIDGET ---
-class PinterestWidget(QWidget):
-    def __init__(self, data):
-        super().__init__()
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        
-        saved_url = data.get("url")
-        if saved_url: self.url = saved_url
-        elif os.path.exists(DEFAULT_IMG_PATH): self.url = DEFAULT_IMG_PATH
-        else: self.url = "https://i.pinimg.com/1200x/e3/bf/36/e3bf36325fce44e12106bdc49549641e.jpg"
-
-        self.img_offset = QPoint(data.get("ox", 0), data.get("oy", 0))
-        self.zoom, self.opacity, self.border_style = data.get("zoom", 1.0), data.get("opacity", 1.0), data.get("border_style", 2)
-        
-        self.show_hints = data.get("show_hints", True)
-
-        if "w" in data:
-            self.resize(data.get("w"), data.get("h"))
-        elif os.path.exists(self.url) and os.path.isfile(self.url):
-            temp = QPixmap(self.url)
-            if not temp.isNull():
-                base_w = 250
-                ratio = temp.height() / temp.width()
-                self.resize(base_w, int(base_w * ratio))
-            else: self.resize(220, 330)
-        else: self.resize(220, 330)
-
-        self.move(data.get("x", 200), data.get("y", 200))
-        
-        self.pixmap = None; self.is_editing = False
-        self.dragging = self.resizing = self.panning = False
-        
-        self.slider = QSlider(Qt.Horizontal, self)
-        self.slider.setRange(10, 100); self.slider.setValue(int(self.opacity*100)); self.slider.hide()
-        self.slider.setStyleSheet("QSlider::groove:horizontal {height:4px; background:#555;} QSlider::handle:horizontal {background:white; width:14px; margin:-5px 0; border-radius:7px;}")
-        self.slider.valueChanged.connect(lambda v: self.set_op(v/100.0))
-
-        if os.path.isfile(self.url):
-            self.pixmap = QPixmap(self.url)
-            self.update()
-        else:
-            self.start_loading(self.url)
-            
-        self.set_interaction(False)
-
-    def set_op(self, val): self.opacity = val; self.update()
-    def start_loading(self, src): self.loader = ImageLoader(src); self.loader.loaded.connect(self.on_load); self.loader.start()
-    def on_load(self, pix, url): self.pixmap = pix; self.url = url; self.update()
-
-    def set_interaction(self, enable):
-        self.is_editing = enable; self.slider.hide(); hwnd = int(self.winId())
-        if enable:
-            win32gui.SetParent(hwnd, 0); self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
-            style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-            win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, style & ~win32con.WS_EX_TRANSPARENT)
-        else:
-            win32gui.SetParent(hwnd, get_wallpaper_window()); self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool)
-            style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-            win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, style & ~win32con.WS_EX_TRANSPARENT)
-        self.show()
-
-    def paintEvent(self, event):
-        if not self.pixmap: return
-        p = QPainter(self); p.setRenderHint(QPainter.Antialiasing)
-        pad = 20 if self.border_style == 2 else 5; rect = self.rect().adjusted(pad, pad, -pad, -pad)
-        
-        if self.border_style == 2:
-            path = QPainterPath(); path.addRoundedRect(rect.adjusted(2,4,2,4), 30, 30)
-            p.setOpacity(self.opacity*0.4); p.fillPath(path, QColor(0,0,0))
-
-        p.setOpacity(self.opacity); path = QPainterPath(); path.addRoundedRect(rect, 30, 30)
-        p.save(); p.setClipPath(path)
-        scaled = self.pixmap.scaled(int(rect.width()*self.zoom), int(rect.height()*self.zoom), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
-        lx, ly = (scaled.width()-rect.width())//2, (scaled.height()-rect.height())//2
-        self.img_offset.setX(max(-lx, min(lx, self.img_offset.x()))); self.img_offset.setY(max(-ly, min(ly, self.img_offset.y())))
-        p.drawPixmap(rect.x()+(rect.width()-scaled.width())//2+self.img_offset.x(), rect.y()+(rect.height()-scaled.height())//2+self.img_offset.y(), scaled)
-        p.restore()
-
-        if self.border_style == 1: p.setPen(QPen(QColor(255,255,255,120), 2)); p.drawRoundedRect(rect, 30, 30)
-        
-        if self.is_editing:
-            p.setPen(QPen(QColor(0,150,255), 2, Qt.DashLine)); p.drawRoundedRect(rect, 30, 30)
-            p.setBrush(QColor(0,150,255)); p.drawEllipse(rect.bottomRight()-QPoint(10,10), 6, 6)
-            self.slider.setGeometry(rect.x()+20, rect.bottom()-30, rect.width()-40, 20)
-            if self.show_hints:
-                p.setPen(QColor(255, 255, 255, 200))
-                p.setFont(QFont("Arial", 10, QFont.Bold))
-                p.drawText(rect, Qt.AlignCenter, "MOVE: Drag\nPAN: Shift+Drag\nRESIZE: ↘")
-
-    def mousePressEvent(self, e):
-        if e.button() == Qt.LeftButton:
-            self.last_pos = e.globalPosition().toPoint()
-            if e.pos().x() > self.width()-60 and e.pos().y() > self.height()-60: self.resizing = True
-            elif e.modifiers() == Qt.ShiftModifier: self.panning = True
-            else: self.dragging = True
-        elif e.button() == Qt.RightButton: self.show_menu(e.globalPosition().toPoint())
-    def mouseMoveEvent(self, e):
-        curr = e.globalPosition().toPoint(); delta = curr - self.last_pos
-        if self.dragging: self.move(self.pos() + delta)
-        elif self.resizing: self.resize(max(100, e.pos().x()), max(150, e.pos().y()))
-        elif self.panning: self.img_offset += delta
-        self.last_pos = curr; self.update()
-    def mouseReleaseEvent(self, e): self.dragging=self.resizing=self.panning=False; save_layouts()
-    def wheelEvent(self, e):
-        if e.modifiers() == Qt.AltModifier: self.set_op(max(0.1, min(1.0, self.opacity + (0.05 if e.angleDelta().y()>0 else -0.05)))); self.slider.setValue(int(self.opacity*100))
-        else: self.zoom = max(1.0, self.zoom + (0.1 if e.angleDelta().y()>0 else -0.1))
-        self.update(); save_layouts()
-    
-    def show_menu(self, pos):
-        m = QMenu(self); m.setStyleSheet(MENU_STYLE)
-        src = m.addMenu("Source Image")
-        src.addAction("Choose from Folder", self.local_src); src.addAction("Paste Web URL", self.web_src)
-        hint_act = m.addAction("Hide Hints" if self.show_hints else "Show Hints")
-        hint_act.triggered.connect(self.toggle_hints)
-        m.addAction("Show/Hide Opacity Slider", lambda: self.slider.setVisible(not self.slider.isVisible()))
-        m.addSeparator(); m.addAction(f"Style: {['Trans','Border','Shadow'][(self.border_style+1)%3]}", self.cycle_style)
-        m.addSeparator(); m.addAction("Delete Widget", self.close_w); m.exec(pos)
-
-    def toggle_hints(self):
-        self.show_hints = not self.show_hints
-        self.update(); save_layouts()
-
-    def local_src(self): 
-        f, _ = QFileDialog.getOpenFileName(self, "Image", "", "Img (*.png *.jpg)"); 
-        if f: self.start_loading(f); save_layouts()
-    def web_src(self): 
-        u, k = QInputDialog.getText(self, "Input", "URL:", text=self.url); 
-        if k and u: self.start_loading(u); save_layouts()
-    def cycle_style(self): self.border_style = (self.border_style+1)%3; self.update(); save_layouts()
-    def close_w(self): self.close(); app.widgets.remove(self); save_layouts()
+SLIDER_STYLE = """
+    QSlider::groove:horizontal { border-radius: 2px; height: 4px; background: rgba(255,255,255,50); }
+    QSlider::handle:horizontal { background: #00a8ff; width: 14px; height: 14px; margin: -5px 0; border-radius: 7px; }
+"""
 
 def get_wallpaper_window():
     progman = win32gui.FindWindow("Progman", None)
@@ -226,93 +42,635 @@ def get_wallpaper_window():
     win32gui.EnumWindows(lambda h, r: r.append(h) if win32gui.FindWindowEx(h, 0, "SHELLDLL_DefView", None) else None, res)
     return win32gui.FindWindowEx(0, res[0], "WorkerW", None) if res else None
 
+# --- SAFE IMAGE THREADING ---
+class ImageLoader(QThread):
+    loaded = Signal(bytes, str) 
+    def __init__(self, src): 
+        super().__init__()
+        self.src = src
+        
+    def run(self):
+        try:
+            if os.path.isfile(self.src):
+                with open(self.src, "rb") as f:
+                    data = f.read()
+            else: 
+                data = requests.get(self.src, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10).content
+            
+            if data:
+                self.loaded.emit(data, self.src)
+        except Exception as e: 
+            logging.error(f"Image load failed: {e}")
+
+# --- NOTION TEXT EDIT (INTERACTIVE CHECKBOXES) ---
+    toggled_checkbox = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMouseTracking(True)
+        self.viewport().setMouseTracking(True)
+
+    def get_checkbox_cursor(self, pos_pt):
+        cursor = self.cursorForPosition(pos_pt)
+        rect = self.cursorRect(cursor)
+
+        if abs(pos_pt.y() - rect.center().y()) < 15:
+            pos = cursor.position()
+
+            for offset in [-2, -1, 0, 1]:
+                test_cursor = QTextCursor(self.document())
+                test_cursor.setPosition(pos)
+
+                if offset < 0:
+                    test_cursor.movePosition(QTextCursor.PreviousCharacter, n=-offset)
+                elif offset > 0:
+                    test_cursor.movePosition(QTextCursor.NextCharacter, n=offset)
+
+                test_cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
+
+                if test_cursor.selectedText() in ['☐', '☑']:
+                    cb_rect = self.cursorRect(test_cursor)
+                    if abs(pos_pt.x() - cb_rect.x()) < 25:
+                        return test_cursor
+        return None
+
+    def mouseMoveEvent(self, e):
+        cb_cursor = self.get_checkbox_cursor(e.position().toPoint())
+
+        if cb_cursor:
+            self.viewport().setCursor(Qt.PointingHandCursor)
+        else:
+            parent = self.parentWidget()
+            is_locked = parent and hasattr(parent, 'is_editing') and not parent.is_editing
+            self.viewport().setCursor(Qt.ArrowCursor if is_locked else Qt.IBeamCursor)
+
+        super().mouseMoveEvent(e)
+
+    def mousePressEvent(self, e):
+        cb_cursor = self.get_checkbox_cursor(e.position().toPoint())
+        parent = self.parentWidget()
+        is_locked = parent and hasattr(parent, 'is_editing') and not parent.is_editing
+
+        if cb_cursor:
+            was_ro = self.isReadOnly()
+            if was_ro:
+                self.setReadOnly(False)
+
+            char = cb_cursor.selectedText()
+            cb_cursor.insertText('☑' if char == '☐' else '☐')
+
+            if was_ro:
+                self.setReadOnly(True)
+
+            self.toggled_checkbox.emit()
+            return
+
+        if is_locked:
+            e.ignore()
+            return
+
+        super().mousePressEvent(e)
+
+    def keyPressEvent(self, e):
+        parent = self.parentWidget()
+        if parent and hasattr(parent, 'is_editing') and not parent.is_editing:
+            return
+
+        if e.key() == Qt.Key_Space:
+            cursor = self.textCursor()
+            cursor.movePosition(cursor.MoveOperation.StartOfBlock, cursor.MoveMode.KeepAnchor)
+            text = cursor.selectedText()
+
+            if text in ['-', '*']:
+                cursor.removeSelectedText()
+                self.textCursor().createList(QTextListFormat.ListDisc)
+                return
+            elif text == '[]':
+                cursor.removeSelectedText()
+                self.insertPlainText("☐ ")
+                return
+            elif text == '1.':
+                cursor.removeSelectedText()
+                self.textCursor().createList(QTextListFormat.ListDecimal)
+                return
+            cursor.clearSelection()
+
+        super().keyPressEvent(e)
+    toggled_checkbox = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # Enable tracking so we can show the Hand Cursor without clicking
+        self.setMouseTracking(True)
+        self.viewport().setMouseTracking(True)
+
+    def get_checkbox_cursor(self, pos_pt):
+        """Intelligent Raycaster: Finds if the mouse is near a checkbox character."""
+        cursor = self.cursorForPosition(pos_pt)
+        rect = self.cursorRect(cursor)
+        
+        # Check if mouse is vertically on the same line
+        if abs(pos_pt.y() - rect.center().y()) < 15: 
+            pos = cursor.position()
+            
+            # Sweep search: Check 2 characters left and right to make it easy to click
+            for offset in [-2, -1, 0, 1]:
+                test_cursor = QTextCursor(self.document())
+                test_cursor.setPosition(pos)
+                
+                if offset < 0:
+                    test_cursor.movePosition(QTextCursor.PreviousCharacter, n=-offset)
+                elif offset > 0:
+                    test_cursor.movePosition(QTextCursor.NextCharacter, n=offset)
+                    
+                test_cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
+                
+                # If we found a checkbox, verify horizontal proximity
+                if test_cursor.selectedText() in ['☐', '☑']:
+                    cb_rect = self.cursorRect(test_cursor)
+                    if abs(pos_pt.x() - cb_rect.x()) < 25:
+                        return test_cursor
+        return None
+
+    def mouseMoveEvent(self, e):
+        # 1. Hover Logic: Change to Pointing Hand when over a checkbox
+        cb_cursor = self.get_checkbox_cursor(e.position().toPoint())
+        parent = self.parentWidget()
+        is_locked = parent and hasattr(parent, 'is_editing') and not parent.is_editing
+        
+        if cb_cursor:
+            self.viewport().setCursor(Qt.PointingHandCursor)
+        else:
+            if is_locked:
+                self.viewport().setCursor(Qt.ArrowCursor)
+            else:
+                self.viewport().setCursor(Qt.IBeamCursor)
+                
+        super().mouseMoveEvent(e)
+
+    def mouseMoveEvent(self, e):
+        cb_cursor = self.get_checkbox_cursor(e.position().toPoint())
+        parent = self.parentWidget()
+
+        if cb_cursor:
+            self.viewport().setCursor(Qt.PointingHandCursor)
+            if parent:
+                parent.set_click_passthrough(False)
+        else:
+            is_locked = parent and hasattr(parent, 'is_editing') and not parent.is_editing
+            self.viewport().setCursor(Qt.ArrowCursor if is_locked else Qt.IBeamCursor)
+            if parent and is_locked:
+                parent.set_click_passthrough(True)
+
+        super().mouseMoveEvent(e)
+
+    def keyPressEvent(self, e):
+        # 4. AUTO FORMATTING (Shortcuts)
+        if e.key() == Qt.Key_Space:
+            cursor = self.textCursor()
+            cursor.movePosition(cursor.MoveOperation.StartOfBlock, cursor.MoveMode.KeepAnchor)
+            text = cursor.selectedText()
+            
+            if text in ['-', '*']:
+                cursor.removeSelectedText()
+                self.textCursor().createList(QTextListFormat.ListDisc)
+                return
+            elif text == '[]':
+                cursor.removeSelectedText()
+                self.insertPlainText("☐ ")
+                return
+            elif text == '1.':
+                cursor.removeSelectedText()
+                self.textCursor().createList(QTextListFormat.ListDecimal)
+                return
+            cursor.clearSelection()
+        super().keyPressEvent(e)
+class NotionTextEdit(QTextEdit):
+    toggled_checkbox = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMouseTracking(True)
+        self.viewport().setMouseTracking(True)
+
+    def get_checkbox_cursor(self, pos_pt):
+        cursor = self.cursorForPosition(pos_pt)
+        rect = self.cursorRect(cursor)
+
+        if abs(pos_pt.y() - rect.center().y()) < 15:
+            pos = cursor.position()
+
+            for offset in [-2, -1, 0, 1]:
+                test_cursor = QTextCursor(self.document())
+                test_cursor.setPosition(pos)
+
+                if offset < 0:
+                    test_cursor.movePosition(QTextCursor.PreviousCharacter, n=-offset)
+                elif offset > 0:
+                    test_cursor.movePosition(QTextCursor.NextCharacter, n=offset)
+
+                test_cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
+
+                if test_cursor.selectedText() in ['☐', '☑']:
+                    cb_rect = self.cursorRect(test_cursor)
+                    if abs(pos_pt.x() - cb_rect.x()) < 25:
+                        return test_cursor
+        return None
+
+    def mouseMoveEvent(self, e):
+        cb_cursor = self.get_checkbox_cursor(e.position().toPoint())
+        parent = self.parentWidget()
+        is_locked = parent and hasattr(parent, 'is_editing') and not parent.is_editing
+
+        if cb_cursor:
+            self.viewport().setCursor(Qt.PointingHandCursor)
+        else:
+            self.viewport().setCursor(Qt.ArrowCursor if is_locked else Qt.IBeamCursor)
+
+        super().mouseMoveEvent(e)
+
+    def mousePressEvent(self, e):
+        cb_cursor = self.get_checkbox_cursor(e.position().toPoint())
+
+        if cb_cursor:
+            was_ro = self.isReadOnly()
+            if was_ro:
+                self.setReadOnly(False)
+
+            char = cb_cursor.selectedText()
+            cb_cursor.insertText('☑' if char == '☐' else '☐')
+
+            if was_ro:
+                self.setReadOnly(True)
+
+            self.toggled_checkbox.emit()
+            return
+
+        parent = self.parentWidget()
+        if parent and hasattr(parent, 'is_editing') and not parent.is_editing:
+            e.ignore()
+            return
+
+        super().mousePressEvent(e)
+
+# --- BASE WIDGET ARCHITECTURE ---
+class BaseWidget(QWidget):
+    def __init__(self, data, controller):
+        super().__init__()
+        self.controller = controller 
+        self.w_type = data.get("type", "base")
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setFocusPolicy(Qt.StrongFocus)
+        
+        self.opacity = data.get("opacity", 1.0)
+        self.roundness = data.get("roundness", 12)
+        self.is_editing = False
+        self.action_state = None 
+        
+        self.resize(data.get("w", 250), data.get("h", 300))
+        self.move(data.get("x", 200), data.get("y", 200))
+
+        self.op_slider = QSlider(Qt.Horizontal, self)
+        self.op_slider.setRange(10, 100); self.op_slider.setValue(int(self.opacity*100))
+        self.op_slider.setStyleSheet(SLIDER_STYLE); self.op_slider.hide()
+        self.op_slider.valueChanged.connect(lambda v: self.set_val('op', v))
+        self.op_slider.sliderReleased.connect(lambda: self.controller.save_all())
+
+        self.rd_slider = QSlider(Qt.Horizontal, self)
+        self.rd_slider.setRange(0, 100); self.rd_slider.setValue(self.roundness)
+        self.rd_slider.setStyleSheet(SLIDER_STYLE); self.rd_slider.hide()
+        self.rd_slider.valueChanged.connect(lambda v: self.set_val('rd', v))
+        self.rd_slider.sliderReleased.connect(lambda: self.controller.save_all())
+
+    def set_val(self, kind, val):
+        if kind == 'op': self.opacity = val/100.0
+        if kind == 'rd': self.roundness = val
+        self.repaint() 
+
+    def setup_complete(self):
+        self.set_interaction(False)
+
+    def set_interaction(self, enable):
+        self.is_editing = enable
+        hwnd = int(self.winId())
+        
+        if enable:
+            win32gui.SetParent(hwnd, 0)
+            self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+            self.show()
+            
+            new_hwnd = int(self.winId())
+            style = win32gui.GetWindowLong(new_hwnd, win32con.GWL_EXSTYLE)
+            win32gui.SetWindowLong(new_hwnd, win32con.GWL_EXSTYLE, style & ~win32con.WS_EX_TRANSPARENT)
+            
+            self.op_slider.show(); self.rd_slider.show()
+            self.activateWindow(); self.raise_()
+        else:
+            # Re-embed into wallpaper to survive gestures/Win+D
+            wallpaper_hwnd = get_wallpaper_window()
+            if wallpaper_hwnd:
+                win32gui.SetParent(hwnd, wallpaper_hwnd)
+                
+            self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool)
+            self.show()
+            
+            # Ensure it accepts clicks (removes click-through)
+            new_hwnd = int(self.winId())
+            style = win32gui.GetWindowLong(new_hwnd, win32con.GWL_EXSTYLE)
+            win32gui.SetWindowLong(new_hwnd, win32con.GWL_EXSTYLE, style & ~win32con.WS_EX_TRANSPARENT)
+
+            self.op_slider.hide(); self.rd_slider.hide()
+
+
+    def resizeEvent(self, e):
+        if hasattr(self, 'op_slider'):
+            self.op_slider.setGeometry(15, self.height() - 45, self.width() - 65, 15)
+            self.rd_slider.setGeometry(15, self.height() - 25, self.width() - 65, 15)
+
+    def mousePressEvent(self, e):
+        if not self.is_editing: return
+        self.activateWindow()
+        self.setFocus() 
+        
+        pos = e.position().toPoint()
+        self.last_pos = e.globalPosition().toPoint()
+        self.start_global = self.last_pos
+        self.start_size = self.size()
+        
+        if pos.x() > self.width()-40 and pos.y() > self.height()-40: 
+            self.action_state = 'resize'
+        elif pos.y() < 40: 
+            self.action_state = 'drag' 
+        else: 
+            self.action_state = None
+
+    def mouseMoveEvent(self, e):
+        if not self.action_state:
+            return super().mouseMoveEvent(e)
+            
+        curr = e.globalPosition().toPoint()
+        if self.action_state == 'drag': 
+            self.move(self.pos() + (curr - self.last_pos))
+            self.last_pos = curr
+        elif self.action_state == 'resize': 
+            total_delta = curr - self.start_global
+            self.resize(max(150, self.start_size.width() + total_delta.x()), max(150, self.start_size.height() + total_delta.y()))
+        
+        self.repaint()
+
+    def mouseReleaseEvent(self, e): 
+        if self.action_state:
+            self.action_state = None
+            self.controller.save_all()
+        else:
+            super().mouseReleaseEvent(e)
+    
+    def contextMenuEvent(self, e):
+        if self.is_editing: self.show_context_menu(e.globalPos())
+
+    def keyPressEvent(self, e):
+        if e.key() in (Qt.Key_Return, Qt.Key_Enter) and e.modifiers() == Qt.ShiftModifier and self.is_editing: 
+            self.controller.toggle_edit()
+        else:
+            super().keyPressEvent(e)
+
+    def show_context_menu(self, pos):
+        m = QMenu(self); m.setStyleSheet(MENU_STYLE)
+        m.addAction("✅ Finish & Lock", self.controller.toggle_edit)
+        m.addSeparator()
+        self.add_custom_menu_items(m)
+        m.addSeparator()
+        
+        st = m.addMenu("⚙️ Manual Settings")
+        st.addAction(f"Opacity: {int(self.opacity*100)}%", self.change_opacity)
+        st.addAction(f"Roundness: {self.roundness}px", self.change_roundness)
+        
+        m.addSeparator()
+        m.addAction("🗑️ Delete Widget", self.delete_widget)
+        m.exec(pos)
+
+    def change_opacity(self):
+        val, ok = QInputDialog.getInt(self, "Opacity", "Enter % (10-100):", int(self.opacity*100), 10, 100)
+        if ok: self.opacity = val/100.0; self.op_slider.setValue(val); self.repaint(); self.controller.save_all()
+
+    def change_roundness(self):
+        val, ok = QInputDialog.getInt(self, "Roundness", "Enter radius (0-100):", self.roundness, 0, 100)
+        if ok: self.roundness = val; self.rd_slider.setValue(val); self.repaint(); self.controller.save_all()
+
+    def delete_widget(self):
+        self.hide(); self.controller.widgets.remove(self); self.controller.save_all(); self.deleteLater()
+
+    def add_custom_menu_items(self, m): pass
+    def get_save_data(self): return {}
+
+    def paintEvent(self, e):
+        p = QPainter(self); p.setRenderHint(QPainter.Antialiasing)
+        rect = self.rect()
+        self.draw_content(p, rect)
+        
+        if self.is_editing:
+            grip_w, grip_h = 40, 5
+            p.setPen(Qt.NoPen); p.setBrush(QColor(255, 255, 255, 120))
+            p.drawRoundedRect((rect.width() - grip_w) // 2, 10, grip_w, grip_h, 2, 2)
+            
+            p.setPen(QPen(QColor(0, 168, 255, 100), 2)); p.setBrush(Qt.NoBrush)
+            p.drawRoundedRect(rect.adjusted(1,1,-1,-1), self.roundness, self.roundness)
+            
+            p.setBrush(QColor(0, 168, 255, 200)); p.setPen(Qt.NoPen)
+            p.drawEllipse(rect.bottomRight() - QPoint(15, 15), 6, 6)
+
+    def draw_content(self, p, rect): pass
+
+# --- SPECIFIC WIDGETS ---
+class ImageWidget(BaseWidget):
+    def __init__(self, data, controller):
+        data["type"] = "image"
+        super().__init__(data, controller)
+        self.url = data.get("url", DEFAULT_IMG if os.path.exists(DEFAULT_IMG) else "https://i.pinimg.com/1200x/e3/bf/36/e3bf36325fce44e12106bdc49549641e.jpg")
+        self.zoom = data.get("zoom", 1.0)
+        self.img_offset = QPoint(data.get("ox", 0), data.get("oy", 0))
+        self.pixmap = None
+        self.start_loading(self.url)
+        self.setup_complete()
+
+    def start_loading(self, src): 
+        self.loader = ImageLoader(src)
+        self.loader.loaded.connect(self.on_load)
+        self.loader.start()
+        
+    def on_load(self, img_data, url): 
+        pix = QPixmap()
+        pix.loadFromData(img_data)
+        if not pix.isNull():
+            self.pixmap = pix
+            self.url = url
+            self.repaint()
+
+    def draw_content(self, p, rect):
+        if not self.pixmap: return
+        p.setOpacity(self.opacity)
+        path = QPainterPath(); path.addRoundedRect(rect, self.roundness, self.roundness)
+        p.save(); p.setClipPath(path)
+        scaled = self.pixmap.scaled(int(rect.width()*self.zoom), int(rect.height()*self.zoom), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+        cx, cy = rect.x() + (rect.width()-scaled.width())//2 + self.img_offset.x(), rect.y() + (rect.height()-scaled.height())//2 + self.img_offset.y()
+        p.drawPixmap(cx, cy, scaled)
+        p.restore()
+
+    def mousePressEvent(self, e):
+        super().mousePressEvent(e)
+        if self.is_editing and e.modifiers() == Qt.ShiftModifier: self.action_state = 'pan'
+
+    def mouseMoveEvent(self, e):
+        if self.action_state == 'pan':
+            self.img_offset += (e.globalPosition().toPoint() - self.last_pos)
+            self.last_pos = e.globalPosition().toPoint(); self.repaint()
+        else: super().mouseMoveEvent(e)
+
+    def wheelEvent(self, e):
+        if not self.is_editing: return
+        self.zoom = max(1.0, self.zoom + (0.1 if e.angleDelta().y() > 0 else -0.1))
+        self.repaint(); self.controller.save_all()
+
+    def add_custom_menu_items(self, m):
+        m.addAction("🖼️ Choose Local Image", self.load_local)
+        m.addAction("🌐 Paste Web URL", self.load_web)
+
+    def load_local(self): 
+        f, _ = QFileDialog.getOpenFileName(self, "Image", "", "Images (*.png *.jpg *.jpeg)")
+        if f: self.start_loading(f); self.controller.save_all()
+        
+    def load_web(self): 
+        u, k = QInputDialog.getText(self, "Input", "Image URL:", text=self.url)
+        if k and u: self.start_loading(u); self.controller.save_all()
+
+    def get_save_data(self): return {"url": self.url, "zoom": self.zoom, "ox": self.img_offset.x(), "oy": self.img_offset.y()}
+
+class NoteWidget(BaseWidget):
+    def __init__(self, data, controller):
+        data["type"] = "note"
+        super().__init__(data, controller)
+        self.text_edit = NotionTextEdit(self)
+        default_text = "<h3 style='color:#ffffff; font-weight: 600; margin-bottom: 5px;'>Notes</h3><p style='color:#a0a0a0;'>Type here...</p>"
+        self.text_edit.setHtml(data.get("text", default_text))
+        self.text_edit.setStyleSheet("background: transparent; color: #ececec; border: none; font-family: 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5;")
+        self.text_edit.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.text_edit.customContextMenuRequested.connect(lambda pos: self.show_context_menu(self.text_edit.mapToGlobal(pos)))
+        
+        self.text_edit.toggled_checkbox.connect(lambda: self.controller.save_all())
+        self.setup_complete()
+
+    def draw_content(self, p, rect):
+        p.setOpacity(self.opacity)
+        path = QPainterPath(); path.addRoundedRect(rect, self.roundness, self.roundness)
+        p.fillPath(path, QColor(25, 25, 25, 230))
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        if hasattr(self, 'text_edit'):
+            top_offset = 40 if self.is_editing else 15
+            bot_offset = 65 if self.is_editing else 15
+            self.text_edit.setGeometry(15, top_offset, self.width() - 30, self.height() - top_offset - bot_offset)
+
+    def set_interaction(self, enable):
+        super().set_interaction(enable)
+        self.text_edit.setReadOnly(not enable)
+        if enable:
+            self.text_edit.setTextInteractionFlags(Qt.TextEditorInteraction)
+            self.text_edit.viewport().setCursor(Qt.IBeamCursor)
+        else:
+            self.text_edit.setTextInteractionFlags(Qt.TextBrowserInteraction)
+            # Remove cursor visually when locking to background
+            cursor = self.text_edit.textCursor()
+            cursor.clearSelection()
+            self.text_edit.setTextCursor(cursor)
+            
+        self.resizeEvent(None)
+
+    def add_custom_menu_items(self, m):
+        fmt = m.addMenu("📝 Insert Format...")
+        fmt.addAction("☐ Checkbox", lambda: self.text_edit.textCursor().insertText("☐ "))
+        fmt.addAction("• Bullet Point", lambda: self.text_edit.textCursor().createList(QTextListFormat.ListDisc))
+        fmt.addAction("1. Number List", lambda: self.text_edit.textCursor().createList(QTextListFormat.ListDecimal))
+
+    def get_save_data(self): return {"text": self.text_edit.toHtml()}
+
 class TrayApp:
     def __init__(self):
         self.qt_app = QApplication(sys.argv)
         self.qt_app.setQuitOnLastWindowClosed(False)
         self.is_edit = False
+        self.widgets = []
         
-        if os.path.exists(ICON_PATH): self.icon = QIcon(ICON_PATH)
+        if os.path.exists("app.ico"):
+            icon = QIcon("app.ico")
         else:
-            p = QPixmap(64,64); p.fill(Qt.transparent); pt = QPainter(p); pt.setRenderHint(QPainter.Antialiasing); pt.setBrush(QColor("#ff4757")); pt.setPen(Qt.NoPen); pt.drawEllipse(12,12,40,40); pt.end()
-            self.icon = QIcon(p)
+            p = QPixmap(64, 64); p.fill(Qt.transparent)
+            pt = QPainter(p); pt.setRenderHint(QPainter.Antialiasing)
+            pt.setBrush(QColor("#00a8ff")); pt.setPen(Qt.NoPen)
+            pt.drawEllipse(12, 12, 40, 40); pt.end()
+            icon = QIcon(p)
             
-        self.tray = QSystemTrayIcon(self.icon)
+        self.tray = QSystemTrayIcon(icon)
         self.menu = QMenu(); self.menu.setStyleSheet(MENU_STYLE)
         
-        # VERSION IN MENU
-        self.menu.addAction(f"Version: {CURRENT_VERSION}").setEnabled(False)
+        self.act_edit = self.menu.addAction("🛠️ Edit Layout")
+        self.act_edit.triggered.connect(self.toggle_edit)
         self.menu.addSeparator()
-
-        self.act_edit = self.menu.addAction("EDIT LAYOUT"); self.act_edit.triggered.connect(self.toggle_edit)
-        self.menu.addAction("ADD WIDGET", self.create_w)
+        self.menu.addAction("🖼️ Add Image", lambda: self.spawn_widget({"type": "image"}))
+        self.menu.addAction("📝 Add Note", lambda: self.spawn_widget({"type": "note"}))
         self.menu.addSeparator()
-        self.act_start = self.menu.addAction("Run on Startup"); self.act_start.setCheckable(True); self.act_start.setChecked(self.chk_start()); self.act_start.triggered.connect(self.set_start)
-        self.menu.addSeparator(); self.menu.addAction("EXIT", self.qt_app.quit)
-        self.tray.setContextMenu(self.menu); self.tray.show()
+        self.act_start = self.menu.addAction("🚀 Run on Startup"); self.act_start.setCheckable(True)
+        self.act_start.setChecked(self.chk_start()); self.act_start.triggered.connect(self.set_start)
+        self.menu.addSeparator(); self.menu.addAction("❌ Quit", self.qt_app.quit)
         
-        self.widgets = []
+        self.tray.setContextMenu(self.menu); self.tray.show()
+        self.tray.activated.connect(lambda r: self.tray.contextMenu().exec(QCursor.pos()) if r in (QSystemTrayIcon.Trigger, QSystemTrayIcon.Context) else None)
         self.load_init()
-        if not os.path.exists(CONFIG_PATH): QTimer.singleShot(1000, self.show_welcome)
-
-        # START AUTO UPDATE CHECK
-        self.updater = UpdateChecker()
-        self.updater.found_update.connect(self.prompt_update)
-        self.updater.start()
-
-    def prompt_update(self, new_ver, url):
-        msg = QMessageBox()
-        msg.setWindowTitle("Update Available")
-        msg.setText(f"A new version ({new_ver}) is available!")
-        msg.setInformativeText("Download and install now?")
-        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        msg.setDefaultButton(QMessageBox.Yes)
-        if msg.exec() == QMessageBox.Yes:
-            self.download_and_install(url)
-
-    def download_and_install(self, url):
-        try:
-            # Download installer to Temp
-            installer_name = url.split("/")[-1]
-            temp_path = os.path.join(os.environ["TEMP"], installer_name)
-            
-            r = requests.get(url, stream=True)
-            with open(temp_path, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=8192): f.write(chunk)
-            
-            # Launch Installer
-            os.startfile(temp_path)
-            self.qt_app.quit()
-        except: pass
-
-    def show_welcome(self): self.welcome = WelcomeScreen(); self.welcome.show()
-    def chk_start(self):
-        try: k = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_READ); winreg.QueryValueEx(k, APP_NAME); return True
-        except: return False
-    def set_start(self, s):
-        k = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
-        if s: winreg.SetValueEx(k, APP_NAME, 0, winreg.REG_SZ, sys.executable)
-        else: 
-            try: winreg.DeleteValue(k, APP_NAME)
-            except: pass
 
     def toggle_edit(self):
-        self.is_edit = not self.is_edit; self.act_edit.setText("FINISH & LOCK" if self.is_edit else "EDIT LAYOUT")
+        self.is_edit = not self.is_edit
+        self.act_edit.setText("✅ Finish & Lock" if self.is_edit else "🛠️ Edit Layout")
         for w in self.widgets: w.set_interaction(self.is_edit)
-        if not self.is_edit: save_layouts()
+        if not self.is_edit: self.save_all()
 
-    def create_w(self, data=None): w = PinterestWidget(data or {}); w.show(); self.widgets.append(w)
+    def spawn_widget(self, data):
+        w = ImageWidget(data, self) if data.get("type") == "image" else NoteWidget(data, self)
+        self.widgets.append(w)
+        if self.is_edit: w.set_interaction(True)
+
     def load_init(self):
         if os.path.exists(CONFIG_PATH):
             try:
-                with open(CONFIG_PATH, "r") as f:
-                    for d in json.load(f): self.create_w(d)
-            except: self.create_w()
-        else: self.create_w()
+                for d in json.load(open(CONFIG_PATH, "r")): self.spawn_widget(d)
+            except: self.spawn_widget({"type": "image"})
+        else: self.spawn_widget({"type": "image"})
 
-def save_layouts():
-    data = [{"url": w.url, "x": w.x(), "y": w.y(), "w": w.width(), "h": w.height(), "ox": w.img_offset.x(), "oy": w.img_offset.y(), "zoom": w.zoom, "opacity": w.opacity, "border_style": w.border_style, "show_hints": w.show_hints} for w in app.widgets]
-    with open(CONFIG_PATH, "w") as f: json.dump(data, f)
+    def save_all(self):
+        data = []
+        for w in self.widgets:
+            base = {"type": w.w_type, "x": w.x(), "y": w.y(), "w": w.width(), "h": w.height(), "opacity": w.opacity, "roundness": w.roundness}
+            base.update(w.get_save_data())
+            data.append(base)
+        try:
+            with open(CONFIG_PATH, "w") as f:
+                json.dump(data, f)
+        except Exception as e: logging.error(f"Save failed: {e}")
+
+    def chk_start(self):
+        try: k = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_READ); winreg.QueryValueEx(k, APP_NAME); return True
+        except: return False
+        
+    def set_start(self, s):
+        k = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
+        if s: 
+            if getattr(sys, 'frozen', False):
+                exe_path = f'"{sys.executable}"'
+            else:
+                exe_path = f'"{sys.executable.replace("python.exe", "pythonw.exe")}" "{os.path.abspath(__file__)}"'
+            winreg.SetValueEx(k, APP_NAME, 0, winreg.REG_SZ, exe_path)
+        else: 
+            try: winreg.DeleteValue(k, APP_NAME)
+            except: pass
 
 if __name__ == "__main__":
     app = TrayApp()
