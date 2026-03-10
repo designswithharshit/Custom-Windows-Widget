@@ -142,6 +142,7 @@ class ModernColorPicker(QDialog):
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.current_color = QColor(initial)
+        self.oldPos = None
         
         self.setStyleSheet("""
             QDialog > QWidget { background: #fdfdfd; border: 1px solid #ccc; border-radius: 8px; }
@@ -170,7 +171,7 @@ class ModernColorPicker(QDialog):
         # Preview & History
         bot_layout = QHBoxLayout()
         self.preview = QLabel()
-        self.preview.setFixedSize(30, 30)
+        self.preview.setFixedSize(40, 20); self.preview.setStyleSheet
         bot_layout.addWidget(self.preview)
         
         self.history_layout = QHBoxLayout(); self.history_layout.setSpacing(2)
@@ -187,6 +188,21 @@ class ModernColorPicker(QDialog):
 
         self.load_history()
         self.sync_color(self.current_color)
+
+    # --- ADDED DRAG SUPPORT ---
+    def mousePressEvent(self, e):
+        if e.button() == Qt.LeftButton:
+            self.oldPos = e.globalPosition().toPoint()
+
+    def mouseMoveEvent(self, e):
+        if self.oldPos is not None:
+            delta = e.globalPosition().toPoint() - self.oldPos
+            self.move(self.pos() + delta)
+            self.oldPos = e.globalPosition().toPoint()
+
+    def mouseReleaseEvent(self, e):
+        self.oldPos = None
+    # --------------------------
 
     def sync_color(self, c):
         self.current_color = c
@@ -785,7 +801,7 @@ class NoteWidget(BaseWidget):
         color = ModernColorPicker.getColor(QColor(self.bg_color), self)
         if color.isValid():
             # Apply slight transparency to the picked background color
-            color.setAlpha(230) 
+            # color.setAlpha(230)
             self.bg_color = color.name(QColor.HexArgb)
             self.repaint()
             self.controller.save_all()
