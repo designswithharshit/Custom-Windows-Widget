@@ -168,16 +168,16 @@ class ModernColorPicker(QDialog):
         self.slider.valueChanged.connect(self.update_brightness)
         layout.addWidget(self.slider)
         
-        # Preview & History
-        bot_layout = QHBoxLayout()
+        # Preview Bar (Full width)
         self.preview = QLabel()
-        self.preview.setFixedSize(40, 20); self.preview.setStyleSheet
-        bot_layout.addWidget(self.preview)
+        self.preview.setFixedHeight(20)
+        layout.addWidget(self.preview)
         
-        self.history_layout = QHBoxLayout(); self.history_layout.setSpacing(2)
-        bot_layout.addLayout(self.history_layout)
-        bot_layout.addStretch()
-        layout.addLayout(bot_layout)
+        # History (Centered below preview)
+        self.history_layout = QHBoxLayout()
+        self.history_layout.setSpacing(4)
+        self.history_layout.setAlignment(Qt.AlignCenter)
+        layout.addLayout(self.history_layout)
         
         # Buttons
         btn_layout = QHBoxLayout()
@@ -308,7 +308,7 @@ class NotionTextEdit(QTextEdit):
                     test_cursor.movePosition(QTextCursor.NextCharacter, n=offset)
                     
                 test_cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
-                if test_cursor.selectedText() in ['☐', '☑']:
+                if test_cursor.selectedText() in ['☐', '☑\uFE0E', '☑']:
                     cb_rect = self.cursorRect(test_cursor)
                     if abs(pos_pt.x() - cb_rect.x()) < 25:
                         return test_cursor
@@ -332,7 +332,7 @@ class NotionTextEdit(QTextEdit):
             if was_ro: self.setReadOnly(False)
             
             char = cb_cursor.selectedText()
-            cb_cursor.insertText('☑' if char == '☐' else '☐')
+            cb_cursor.insertText('☑\uFE0E' if char == '☐' else '☐')
             
             if was_ro: self.setReadOnly(True)
             self.toggled_checkbox.emit()
@@ -718,7 +718,35 @@ class NoteWidget(BaseWidget):
         self.text_edit = NotionTextEdit(self)
         default_text = "<h3 style='color:#ffffff; font-weight: 600; margin-bottom: 5px;'>Notes</h3><p style='color:#a0a0a0;'>Type here...</p>"
         self.text_edit.setHtml(data.get("text", default_text))
-        self.text_edit.setStyleSheet("background: transparent; color: #ececec; border: none; font-family: 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5;")
+        self.text_edit.setStyleSheet("""
+            QTextEdit {
+                background: transparent; 
+                color: #ececec; 
+                border: none; 
+                font-family: 'Segoe UI', sans-serif; 
+                font-size: 14px;
+            }
+            QScrollBar:vertical {
+                border: none;
+                background: transparent;
+                width: 6px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(255, 255, 255, 0.3);
+                min-height: 30px;
+                border-radius: 3px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: rgba(255, 255, 255, 0.5);
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background: none;
+            }
+        """)
         self.text_edit.setContextMenuPolicy(Qt.CustomContextMenu)
         self.text_edit.customContextMenuRequested.connect(lambda pos: self.show_context_menu(self.text_edit.mapToGlobal(pos)))
         
