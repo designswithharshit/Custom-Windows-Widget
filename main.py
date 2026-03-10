@@ -72,8 +72,8 @@ class WelcomeScreen(QDialog):
 class ImageLoader(QThread):
     loaded = Signal(bytes, str) 
     
-    def __init__(self, src): 
-        super().__init__()  # <-- MUST BE EMPTY! Do not put 'parent' or 'src' in here.
+    def __init__(self, src, parent=None): 
+        super().__init__(parent) 
         self.src = src
         
     def run(self):
@@ -89,9 +89,40 @@ class ImageLoader(QThread):
         except Exception as e: 
             logging.error(f"Image load failed: {e}")
 
+# --- FLOATING TOOLBAR ---
+from PySide6.QtWidgets import QHBoxLayout
+
+class FloatingToolbar(QWidget):
+    def __init__(self, text_edit):
+        super().__init__()
+        self.text_edit = text_edit
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool | Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        
+        layout = QHBoxLayout(self); layout.setContentsMargins(5, 5, 5, 5); layout.setSpacing(2)
+        self.setStyleSheet("QWidget { background: #2c2c2c; border: 1px solid #444; border-radius: 6px; } QPushButton { background: transparent; color: white; border: none; padding: 4px 8px; font-weight: bold; } QPushButton:hover { background: #444; border-radius: 4px; }")
+
+        for text, action in [("B", 'bold'), ("I", 'italic'), ("S", 'strike'), ("H1", 'h1'), ("🎨", 'color')]:
+            btn = QPushButton(text)
+            btn.clicked.connect(lambda _, a=action: self.apply_format(a))
+            layout.addWidget(btn)
+
+    def apply_format(self, action):
+        fmt = QTextCharFormat()
+        if action == 'bold': fmt.setFontWeight(QFont.Bold if self.text_edit.currentCharFormat().fontWeight() != QFont.Bold else QFont.Normal)
+        elif action == 'italic': fmt.setFontItalic(not self.text_edit.currentCharFormat().fontItalic())
+        elif action == 'strike': fmt.setFontStrikeOut(not self.text_edit.currentCharFormat().fontStrikeOut())
+        elif action == 'h1': fmt.setFontPointSize(18); fmt.setFontWeight(QFont.Bold)
+        elif action == 'color':
+            from PySide6.QtWidgets import QColorDialog
+            color = QColorDialog.getColor(Qt.white, self)
+            if color.isValid(): self.text_edit.setTextColor(color)
+            return
+        self.text_edit.mergeCurrentCharFormat(fmt)
+
 # --- NOTION TEXT EDIT (INTERACTIVE CHECKBOXES) ---
-    class NotionTextEdit(QTextEdit):
-        toggled_checkbox = Signal()
+class NotionTextEdit(QTextEdit):
+    toggled_checkbox = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -189,98 +220,6 @@ class ImageLoader(QThread):
 
         super().keyPressEvent(e)
 
-from PySide6.QtWidgets import QHBoxLayout
-
-class FloatingToolbar(QWidget):
-
-    def __init__(self, text_edit):
-        super().__init__()
-        self.text_edit = text_edit
-        # WindowDoesNotAcceptFocus ensures text stays highlighted when clicked
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool | Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint)
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        
-        layout = QHBoxLayout(self); layout.setContentsMargins(5, 5, 5, 5); layout.setSpacing(2)
-        self.setStyleSheet("QWidget { background: #2c2c2c; border: 1px solid #444; border-radius: 6px; } QPushButton { background: transparent; color: white; border: none; padding: 4px 8px; font-weight: bold; } QPushButton:hover { background: #444; border-radius: 4px; }")
-
-        for text, action in [("B", 'bold'), ("I", 'italic'), ("S", 'strike'), ("H1", 'h1'), ("🎨", 'color')]:
-            btn = QPushButton(text)
-            btn.clicked.connect(lambda _, a=action: self.apply_format(a))
-            layout.addWidget(btn)
-
-    def apply_format(self, action):
-        fmt = QTextCharFormat()
-        if action == 'bold': fmt.setFontWeight(QFont.Bold if self.text_edit.currentCharFormat().fontWeight() != QFont.Bold else QFont.Normal)
-        elif action == 'italic': fmt.setFontItalic(not self.text_edit.currentCharFormat().fontItalic())
-        elif action == 'strike': fmt.setFontStrikeOut(not self.text_edit.currentCharFormat().fontStrikeOut())
-        elif action == 'h1': fmt.setFontPointSize(18); fmt.setFontWeight(QFont.Bold)
-        elif action == 'color':
-            from PySide6.QtWidgets import QColorDialog
-            color = QColorDialog.getColor(Qt.white, self)
-            if color.isValid(): self.text_edit.setTextColor(color)
-            return
-        self.text_edit.mergeCurrentCharFormat(fmt)
-
-    def get_checkbox_cursor(self, pos_pt):
-        cursor = self.cursorForPosition(pos_pt)
-        rect = self.cursorRect(cursor)
-
-        if abs(pos_pt.y() - rect.center().y()) < 15:
-            pos = cursor.position()
-
-            for offset in [-2, -1, 0, 1]:
-                test_cursor = QTextCursor(self.document())
-                test_cursor.setPosition(pos)
-
-                if offset < 0:
-                    test_cursor.movePosition(QTextCursor.PreviousCharacter, n=-offset)
-                elif offset > 0:
-                    test_cursor.movePosition(QTextCursor.NextCharacter, n=offset)
-
-                test_cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
-
-                if test_cursor.selectedText() in ['☐', '☑']:
-                    cb_rect = self.cursorRect(test_cursor)
-                    if abs(pos_pt.x() - cb_rect.x()) < 25:
-                        return test_cursor
-        return None
-
-    def mouseMoveEvent(self, e):
-        cb_cursor = self.get_checkbox_cursor(e.position().toPoint())
-        parent = self.parentWidget()
-        is_locked = parent and hasattr(parent, 'is_editing') and not parent.is_editing
-
-        if cb_cursor:
-            self.viewport().setCursor(Qt.PointingHandCursor)
-        else:
-            self.viewport().setCursor(Qt.ArrowCursor if is_locked else Qt.IBeamCursor)
-
-        super().mouseMoveEvent(e)
-
-    def mousePressEvent(self, e):
-        cb_cursor = self.get_checkbox_cursor(e.position().toPoint())
-
-        if cb_cursor:
-            was_ro = self.isReadOnly()
-            if was_ro:
-                self.setReadOnly(False)
-
-            char = cb_cursor.selectedText()
-            cb_cursor.insertText('☑' if char == '☐' else '☐')
-
-            if was_ro:
-                self.setReadOnly(True)
-
-            self.toggled_checkbox.emit()
-            return
-
-        parent = self.parentWidget()
-        if parent and hasattr(parent, 'is_editing') and not parent.is_editing:
-            e.ignore()
-            return
-
-        super().mousePressEvent(e)
-
 # --- BASE WIDGET ARCHITECTURE ---
 class BaseWidget(QWidget):
     def __init__(self, data, controller):
@@ -334,7 +273,6 @@ class BaseWidget(QWidget):
             self.op_slider.show(); self.rd_slider.show()
             self.activateWindow(); self.raise_()
         else:
-            # Re-embed into wallpaper to survive gestures/Win+D
             wallpaper_hwnd = get_wallpaper_window()
             if wallpaper_hwnd:
                 win32gui.SetParent(hwnd, wallpaper_hwnd)
@@ -342,13 +280,11 @@ class BaseWidget(QWidget):
             self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool)
             self.show()
             
-            # Ensure it accepts clicks (removes click-through)
             new_hwnd = int(self.winId())
             style = win32gui.GetWindowLong(new_hwnd, win32con.GWL_EXSTYLE)
             win32gui.SetWindowLong(new_hwnd, win32con.GWL_EXSTYLE, style & ~win32con.WS_EX_TRANSPARENT)
 
             self.op_slider.hide(); self.rd_slider.hide()
-
 
     def resizeEvent(self, e):
         if hasattr(self, 'op_slider'):
