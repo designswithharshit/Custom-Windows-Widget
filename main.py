@@ -449,23 +449,60 @@ class ImageWidget(BaseWidget):
 
     def get_save_data(self): return {"url": self.url, "zoom": self.zoom, "ox": self.img_offset.x(), "oy": self.img_offset.y()}
 
-from PySide6.QtWidgets import QHBoxLayout
+from PySide6.QtWidgets import QHBoxLayout, QColorDialog, QPushButton, QWidget, QGraphicsDropShadowEffect
+from PySide6.QtGui import QTextCharFormat, QFont, QColor
+from PySide6.QtCore import Qt
 
 class FloatingToolbar(QWidget):
     def __init__(self, text_edit):
         super().__init__()
         self.text_edit = text_edit
-        # WindowDoesNotAcceptFocus ensures text stays highlighted when clicked
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool | Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         
-        layout = QHBoxLayout(self); layout.setContentsMargins(5, 5, 5, 5); layout.setSpacing(2)
-        self.setStyleSheet("QWidget { background: #2c2c2c; border: 1px solid #444; border-radius: 6px; } QPushButton { background: transparent; color: white; border: none; padding: 4px 8px; font-weight: bold; } QPushButton:hover { background: #444; border-radius: 4px; }")
+        # 1. Create the shadow effect
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(15)
+        shadow.setColor(QColor(0, 0, 0, 40)) # Soft light shadow
+        shadow.setOffset(0, 4)
+        
+        # 2. Main layout needs margins so the shadow doesn't get cut off
+        main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(15, 15, 15, 15) 
+        
+        # 3. Create the white container box
+        self.container = QWidget(self)
+        self.container.setGraphicsEffect(shadow)
+        self.container.setStyleSheet("""
+            QWidget { 
+                background-color: #ffffff; 
+                border: 1px solid #e0e0e0; 
+                border-radius: 6px; 
+            }
+            QPushButton { 
+                background: transparent; 
+                color: #37352f; /* Notion's dark text color */
+                border: none; 
+                font-weight: bold; 
+                font-family: 'Segoe UI', sans-serif; 
+                border-radius: 4px; 
+                padding: 6px 12px; 
+            }
+            QPushButton:hover { 
+                background-color: #f1f1ef; /* Light gray hover */
+            }
+        """)
+        
+        container_layout = QHBoxLayout(self.container)
+        container_layout.setContentsMargins(4, 4, 4, 4)
+        container_layout.setSpacing(2)
 
         for text, action in [("B", 'bold'), ("I", 'italic'), ("S", 'strike'), ("H1", 'h1'), ("🎨", 'color')]:
             btn = QPushButton(text)
             btn.clicked.connect(lambda _, a=action: self.apply_format(a))
-            layout.addWidget(btn)
+            container_layout.addWidget(btn)
+            
+        main_layout.addWidget(self.container)
 
     def apply_format(self, action):
         fmt = QTextCharFormat()
@@ -474,8 +511,20 @@ class FloatingToolbar(QWidget):
         elif action == 'strike': fmt.setFontStrikeOut(not self.text_edit.currentCharFormat().fontStrikeOut())
         elif action == 'h1': fmt.setFontPointSize(18); fmt.setFontWeight(QFont.Bold)
         elif action == 'color':
-            from PySide6.QtWidgets import QColorDialog
-            color = QColorDialog.getColor(Qt.white, self)
+            color = QColorDialog.getColor(Qt.black, self, "Pick Color", options=QColorDialog.DontUseNativeDialog)
+            if color.isValid(): self.text_edit.setTextColor(color)
+            return
+        self.text_edit.mergeCurrentCharFormat(fmt)
+
+    def apply_format(self, action):
+        fmt = QTextCharFormat()
+        if action == 'bold': fmt.setFontWeight(QFont.Bold if self.text_edit.currentCharFormat().fontWeight() != QFont.Bold else QFont.Normal)
+        elif action == 'italic': fmt.setFontItalic(not self.text_edit.currentCharFormat().fontItalic())
+        elif action == 'strike': fmt.setFontStrikeOut(not self.text_edit.currentCharFormat().fontStrikeOut())
+        elif action == 'h1': fmt.setFontPointSize(18); fmt.setFontWeight(QFont.Bold)
+        elif action == 'color':
+            # This flag forces the modern Qt UI instead of the Windows native dialog
+            color = QColorDialog.getColor(Qt.white, self, "Pick Color", options=QColorDialog.DontUseNativeDialog)
             if color.isValid(): self.text_edit.setTextColor(color)
             return
         self.text_edit.mergeCurrentCharFormat(fmt)
