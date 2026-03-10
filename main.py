@@ -22,6 +22,7 @@ def resource_path(relative_path):
 
 ICON_PATH = resource_path("app.ico")
 DEFAULT_IMG = resource_path("default.jpg")
+HEADERS = {'User-Agent': 'Mozilla/5.0'}
 
 MENU_STYLE = """
     QMenu { background-color: #1e1e1e; color: #ececec; border: 1px solid #333; border-radius: 6px; padding: 4px; font-family: 'Segoe UI'; font-size: 13px; }
@@ -42,11 +43,37 @@ def get_wallpaper_window():
     win32gui.EnumWindows(lambda h, r: r.append(h) if win32gui.FindWindowEx(h, 0, "SHELLDLL_DefView", None) else None, res)
     return win32gui.FindWindowEx(0, res[0], "WorkerW", None) if res else None
 
+# --- WELCOME SCREEN ---
+class WelcomeScreen(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Welcome")
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.resize(500, 350)
+        
+        layout = QVBoxLayout(self); layout.setContentsMargins(20,20,20,20)
+        self.bg = QLabel(self); self.bg.setStyleSheet("background-color: rgba(20, 20, 20, 230); border: 1px solid #444; border-radius: 15px;")
+        self.bg.setGeometry(0, 0, 500, 350); self.bg.lower()
+
+        title = QLabel("WinWidget is Active!", self); title.setStyleSheet("color: white; font-size: 24px; font-weight: bold;"); title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+
+        info = QLabel("1. The app runs in your System Tray (Bottom Right).\n2. Right-Click the Tray Icon to 'Edit Layout'.\n3. Right-Click any widget to change its image.", self)
+        info.setStyleSheet("color: #ccc; font-size: 14px; margin: 15px;"); info.setWordWrap(True); info.setAlignment(Qt.AlignLeft)
+        layout.addWidget(info)
+        
+        btn = QPushButton("Got it"); btn.setStyleSheet("background: #E60023; color: white; padding: 8px; border-radius: 5px;")
+        btn.clicked.connect(self.accept); layout.addWidget(btn)
+        layout.setAlignment(btn, Qt.AlignCenter)
+        self.exec()()
+
 # --- SAFE IMAGE THREADING ---
 class ImageLoader(QThread):
     loaded = Signal(bytes, str) 
+    
     def __init__(self, src): 
-        super().__init__()
+        super().__init__()  # <-- MUST BE EMPTY! Do not put 'parent' or 'src' in here.
         self.src = src
         
     def run(self):
@@ -63,31 +90,43 @@ class ImageLoader(QThread):
             logging.error(f"Image load failed: {e}")
 
 # --- NOTION TEXT EDIT (INTERACTIVE CHECKBOXES) ---
-    toggled_checkbox = Signal()
+    class NotionTextEdit(QTextEdit):
+        toggled_checkbox = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMouseTracking(True)
         self.viewport().setMouseTracking(True)
+        self.toolbar = FloatingToolbar(self)
+        self.selectionChanged.connect(self.handle_selection)
+
+    def handle_selection(self):
+        parent = self.parentWidget()
+        is_editing = parent and getattr(parent, 'is_editing', False)
+        
+        if self.textCursor().hasSelection() and is_editing:
+            rect = self.cursorRect(self.textCursor())
+            global_pos = self.viewport().mapToGlobal(rect.topRight())
+            self.toolbar.move(global_pos.x() + 10, global_pos.y() - 40)
+            self.toolbar.show()
+        else:
+            self.toolbar.hide()
 
     def get_checkbox_cursor(self, pos_pt):
         cursor = self.cursorForPosition(pos_pt)
         rect = self.cursorRect(cursor)
-
+        
         if abs(pos_pt.y() - rect.center().y()) < 15:
             pos = cursor.position()
-
             for offset in [-2, -1, 0, 1]:
                 test_cursor = QTextCursor(self.document())
                 test_cursor.setPosition(pos)
-
                 if offset < 0:
                     test_cursor.movePosition(QTextCursor.PreviousCharacter, n=-offset)
                 elif offset > 0:
                     test_cursor.movePosition(QTextCursor.NextCharacter, n=offset)
-
+                    
                 test_cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
-
                 if test_cursor.selectedText() in ['☐', '☑']:
                     cb_rect = self.cursorRect(test_cursor)
                     if abs(pos_pt.x() - cb_rect.x()) < 25:
@@ -96,14 +135,10 @@ class ImageLoader(QThread):
 
     def mouseMoveEvent(self, e):
         cb_cursor = self.get_checkbox_cursor(e.position().toPoint())
+        parent = self.parentWidget()
+        is_locked = parent and hasattr(parent, 'is_editing') and not parent.is_editing
 
-        if cb_cursor:
-            self.viewport().setCursor(Qt.PointingHandCursor)
-        else:
-            parent = self.parentWidget()
-            is_locked = parent and hasattr(parent, 'is_editing') and not parent.is_editing
-            self.viewport().setCursor(Qt.ArrowCursor if is_locked else Qt.IBeamCursor)
-
+        self.viewport().setCursor(Qt.PointingHandCursor if cb_cursor else (Qt.ArrowCursor if is_locked else Qt.IBeamCursor))
         super().mouseMoveEvent(e)
 
     def mousePressEvent(self, e):
@@ -113,15 +148,12 @@ class ImageLoader(QThread):
 
         if cb_cursor:
             was_ro = self.isReadOnly()
-            if was_ro:
-                self.setReadOnly(False)
-
+            if was_ro: self.setReadOnly(False)
+            
             char = cb_cursor.selectedText()
             cb_cursor.insertText('☑' if char == '☐' else '☐')
-
-            if was_ro:
-                self.setReadOnly(True)
-
+            
+            if was_ro: self.setReadOnly(True)
             self.toggled_checkbox.emit()
             return
 
@@ -138,7 +170,7 @@ class ImageLoader(QThread):
 
         if e.key() == Qt.Key_Space:
             cursor = self.textCursor()
-            cursor.movePosition(cursor.MoveOperation.StartOfBlock, cursor.MoveMode.KeepAnchor)
+            cursor.movePosition(QTextCursor.StartOfBlock, QTextCursor.KeepAnchor)
             text = cursor.selectedText()
 
             if text in ['-', '*']:
@@ -156,102 +188,38 @@ class ImageLoader(QThread):
             cursor.clearSelection()
 
         super().keyPressEvent(e)
-    toggled_checkbox = Signal()
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        # Enable tracking so we can show the Hand Cursor without clicking
-        self.setMouseTracking(True)
-        self.viewport().setMouseTracking(True)
+from PySide6.QtWidgets import QHBoxLayout
 
-    def get_checkbox_cursor(self, pos_pt):
-        """Intelligent Raycaster: Finds if the mouse is near a checkbox character."""
-        cursor = self.cursorForPosition(pos_pt)
-        rect = self.cursorRect(cursor)
+class FloatingToolbar(QWidget):
+
+    def __init__(self, text_edit):
+        super().__init__()
+        self.text_edit = text_edit
+        # WindowDoesNotAcceptFocus ensures text stays highlighted when clicked
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool | Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
         
-        # Check if mouse is vertically on the same line
-        if abs(pos_pt.y() - rect.center().y()) < 15: 
-            pos = cursor.position()
-            
-            # Sweep search: Check 2 characters left and right to make it easy to click
-            for offset in [-2, -1, 0, 1]:
-                test_cursor = QTextCursor(self.document())
-                test_cursor.setPosition(pos)
-                
-                if offset < 0:
-                    test_cursor.movePosition(QTextCursor.PreviousCharacter, n=-offset)
-                elif offset > 0:
-                    test_cursor.movePosition(QTextCursor.NextCharacter, n=offset)
-                    
-                test_cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
-                
-                # If we found a checkbox, verify horizontal proximity
-                if test_cursor.selectedText() in ['☐', '☑']:
-                    cb_rect = self.cursorRect(test_cursor)
-                    if abs(pos_pt.x() - cb_rect.x()) < 25:
-                        return test_cursor
-        return None
+        layout = QHBoxLayout(self); layout.setContentsMargins(5, 5, 5, 5); layout.setSpacing(2)
+        self.setStyleSheet("QWidget { background: #2c2c2c; border: 1px solid #444; border-radius: 6px; } QPushButton { background: transparent; color: white; border: none; padding: 4px 8px; font-weight: bold; } QPushButton:hover { background: #444; border-radius: 4px; }")
 
-    def mouseMoveEvent(self, e):
-        # 1. Hover Logic: Change to Pointing Hand when over a checkbox
-        cb_cursor = self.get_checkbox_cursor(e.position().toPoint())
-        parent = self.parentWidget()
-        is_locked = parent and hasattr(parent, 'is_editing') and not parent.is_editing
-        
-        if cb_cursor:
-            self.viewport().setCursor(Qt.PointingHandCursor)
-        else:
-            if is_locked:
-                self.viewport().setCursor(Qt.ArrowCursor)
-            else:
-                self.viewport().setCursor(Qt.IBeamCursor)
-                
-        super().mouseMoveEvent(e)
+        for text, action in [("B", 'bold'), ("I", 'italic'), ("S", 'strike'), ("H1", 'h1'), ("🎨", 'color')]:
+            btn = QPushButton(text)
+            btn.clicked.connect(lambda _, a=action: self.apply_format(a))
+            layout.addWidget(btn)
 
-    def mouseMoveEvent(self, e):
-        cb_cursor = self.get_checkbox_cursor(e.position().toPoint())
-        parent = self.parentWidget()
-
-        if cb_cursor:
-            self.viewport().setCursor(Qt.PointingHandCursor)
-            if parent:
-                parent.set_click_passthrough(False)
-        else:
-            is_locked = parent and hasattr(parent, 'is_editing') and not parent.is_editing
-            self.viewport().setCursor(Qt.ArrowCursor if is_locked else Qt.IBeamCursor)
-            if parent and is_locked:
-                parent.set_click_passthrough(True)
-
-        super().mouseMoveEvent(e)
-
-    def keyPressEvent(self, e):
-        # 4. AUTO FORMATTING (Shortcuts)
-        if e.key() == Qt.Key_Space:
-            cursor = self.textCursor()
-            cursor.movePosition(cursor.MoveOperation.StartOfBlock, cursor.MoveMode.KeepAnchor)
-            text = cursor.selectedText()
-            
-            if text in ['-', '*']:
-                cursor.removeSelectedText()
-                self.textCursor().createList(QTextListFormat.ListDisc)
-                return
-            elif text == '[]':
-                cursor.removeSelectedText()
-                self.insertPlainText("☐ ")
-                return
-            elif text == '1.':
-                cursor.removeSelectedText()
-                self.textCursor().createList(QTextListFormat.ListDecimal)
-                return
-            cursor.clearSelection()
-        super().keyPressEvent(e)
-class NotionTextEdit(QTextEdit):
-    toggled_checkbox = Signal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setMouseTracking(True)
-        self.viewport().setMouseTracking(True)
+    def apply_format(self, action):
+        fmt = QTextCharFormat()
+        if action == 'bold': fmt.setFontWeight(QFont.Bold if self.text_edit.currentCharFormat().fontWeight() != QFont.Bold else QFont.Normal)
+        elif action == 'italic': fmt.setFontItalic(not self.text_edit.currentCharFormat().fontItalic())
+        elif action == 'strike': fmt.setFontStrikeOut(not self.text_edit.currentCharFormat().fontStrikeOut())
+        elif action == 'h1': fmt.setFontPointSize(18); fmt.setFontWeight(QFont.Bold)
+        elif action == 'color':
+            from PySide6.QtWidgets import QColorDialog
+            color = QColorDialog.getColor(Qt.white, self)
+            if color.isValid(): self.text_edit.setTextColor(color)
+            return
+        self.text_edit.mergeCurrentCharFormat(fmt)
 
     def get_checkbox_cursor(self, pos_pt):
         cursor = self.cursorForPosition(pos_pt)
@@ -545,6 +513,41 @@ class ImageWidget(BaseWidget):
 
     def get_save_data(self): return {"url": self.url, "zoom": self.zoom, "ox": self.img_offset.x(), "oy": self.img_offset.y()}
 
+from PySide6.QtWidgets import QHBoxLayout
+
+class FloatingToolbar(QWidget):
+    def __init__(self, text_edit):
+        super().__init__()
+        self.text_edit = text_edit
+        # WindowDoesNotAcceptFocus ensures text stays highlighted when clicked
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool | Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        
+        layout = QHBoxLayout(self); layout.setContentsMargins(5, 5, 5, 5); layout.setSpacing(2)
+        self.setStyleSheet("QWidget { background: #2c2c2c; border: 1px solid #444; border-radius: 6px; } QPushButton { background: transparent; color: white; border: none; padding: 4px 8px; font-weight: bold; } QPushButton:hover { background: #444; border-radius: 4px; }")
+
+        for text, action in [("B", 'bold'), ("I", 'italic'), ("S", 'strike'), ("H1", 'h1'), ("🎨", 'color')]:
+            btn = QPushButton(text)
+            btn.clicked.connect(lambda _, a=action: self.apply_format(a))
+            layout.addWidget(btn)
+
+    def apply_format(self, action):
+        fmt = QTextCharFormat()
+        if action == 'bold': fmt.setFontWeight(QFont.Bold if self.text_edit.currentCharFormat().fontWeight() != QFont.Bold else QFont.Normal)
+        elif action == 'italic': fmt.setFontItalic(not self.text_edit.currentCharFormat().fontItalic())
+        elif action == 'strike': fmt.setFontStrikeOut(not self.text_edit.currentCharFormat().fontStrikeOut())
+        elif action == 'h1': fmt.setFontPointSize(18); fmt.setFontWeight(QFont.Bold)
+        elif action == 'color':
+            from PySide6.QtWidgets import QColorDialog
+            color = QColorDialog.getColor(Qt.white, self)
+            if color.isValid(): self.text_edit.setTextColor(color)
+            return
+        self.text_edit.mergeCurrentCharFormat(fmt)
+
+from PySide6.QtWidgets import QHBoxLayout, QColorDialog, QPushButton, QWidget, QInputDialog, QMenu
+from PySide6.QtGui import QTextCharFormat, QColor, QFont, QTextCursor, QTextListFormat, QPainter, QPainterPath, QPen
+
+# New NoteWidget with rich text editing and formatting options
 class NoteWidget(BaseWidget):
     def __init__(self, data, controller):
         data["type"] = "note"
@@ -557,12 +560,13 @@ class NoteWidget(BaseWidget):
         self.text_edit.customContextMenuRequested.connect(lambda pos: self.show_context_menu(self.text_edit.mapToGlobal(pos)))
         
         self.text_edit.toggled_checkbox.connect(lambda: self.controller.save_all())
+        self.bg_color = data.get("bg_color", "rgba(25, 25, 25, 230)")
         self.setup_complete()
 
     def draw_content(self, p, rect):
         p.setOpacity(self.opacity)
         path = QPainterPath(); path.addRoundedRect(rect, self.roundness, self.roundness)
-        p.fillPath(path, QColor(25, 25, 25, 230))
+        p.fillPath(path, QColor(self.bg_color))
 
     def resizeEvent(self, e):
         super().resizeEvent(e)
@@ -579,21 +583,69 @@ class NoteWidget(BaseWidget):
             self.text_edit.viewport().setCursor(Qt.IBeamCursor)
         else:
             self.text_edit.setTextInteractionFlags(Qt.TextBrowserInteraction)
-            # Remove cursor visually when locking to background
             cursor = self.text_edit.textCursor()
             cursor.clearSelection()
             self.text_edit.setTextCursor(cursor)
-            
         self.resizeEvent(None)
 
     def add_custom_menu_items(self, m):
-        fmt = m.addMenu("📝 Insert Format...")
+        # 1. Formatting
+        fmt = m.addMenu("📝 Insert...")
         fmt.addAction("☐ Checkbox", lambda: self.text_edit.textCursor().insertText("☐ "))
         fmt.addAction("• Bullet Point", lambda: self.text_edit.textCursor().createList(QTextListFormat.ListDisc))
         fmt.addAction("1. Number List", lambda: self.text_edit.textCursor().createList(QTextListFormat.ListDecimal))
+        
+        # 2. Styling
+        style = m.addMenu("✨ Style Text")
+        style.addAction("Bold", lambda: self.apply_format('bold'))
+        style.addAction("Italic", lambda: self.apply_format('italic'))
+        style.addAction("Strikethrough", lambda: self.apply_format('strike'))
+        style.addSeparator()
+        style.addAction("Heading 1", lambda: self.apply_format('h1'))
+        style.addAction("Normal Text", lambda: self.apply_format('normal'))
 
-    def get_save_data(self): return {"text": self.text_edit.toHtml()}
+        # 3. Colors
+        colors = m.addMenu("🎨 Colors")
+        colors.addAction("Change Text Color", self.change_text_color)
+        colors.addAction("Change Background Color", self.change_bg_color)
 
+    def apply_format(self, action):
+        cursor = self.text_edit.textCursor()
+        fmt = QTextCharFormat()
+        if action == 'bold':
+            current = self.text_edit.currentCharFormat().fontWeight()
+            fmt.setFontWeight(QFont.Bold if current != QFont.Bold else QFont.Normal)
+        elif action == 'italic':
+            fmt.setFontItalic(not self.text_edit.currentCharFormat().fontItalic())
+        elif action == 'strike':
+            fmt.setFontStrikeOut(not self.text_edit.currentCharFormat().fontStrikeOut())
+        elif action == 'h1':
+            fmt.setFontPointSize(18); fmt.setFontWeight(QFont.Bold)
+        elif action == 'normal':
+            fmt.setFontPointSize(14); fmt.setFontWeight(QFont.Normal)
+            
+        cursor.mergeCharFormat(fmt)
+        self.text_edit.mergeCurrentCharFormat(fmt)
+        self.controller.save_all()
+
+    def change_text_color(self):
+        from PySide6.QtWidgets import QColorDialog
+        color = QColorDialog.getColor(Qt.white, self)
+        if color.isValid():
+            self.text_edit.setTextColor(color)
+            self.controller.save_all()
+
+    def change_bg_color(self):
+        from PySide6.QtWidgets import QColorDialog
+        color = QColorDialog.getColor(QColor(self.bg_color), self, options=QColorDialog.ShowAlphaChannel)
+        if color.isValid():
+            self.bg_color = color.name(QColor.HexArgb) # Supports transparency
+            self.repaint()
+            self.controller.save_all()
+
+    def get_save_data(self): 
+        return {"text": self.text_edit.toHtml(), "bg_color": self.bg_color}
+    
 class TrayApp:
     def __init__(self):
         self.qt_app = QApplication(sys.argv)
