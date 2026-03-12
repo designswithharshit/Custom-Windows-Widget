@@ -3,18 +3,18 @@
 ; Non-commercial use only
 
 #define MyAppName "WinWidget"
-#define MyAppVersion "1.0.0"
-#define MyAppPublisher "Harshit Kashyap Creations."
-#define MyAppURL "https://www.example.com/https://github.com/designswithharshit"
-#define MyAppExeName "WinWidget.exe"
-#define MyAppAssocName MyAppName + " File"
+#define MyAppVersion "4.4"
+#define MyAppPublisher "designswithharshit, Harshit Kashyap"
+#define MyAppURL "https://github.com/designswithharshit/"
+#define MyAppExeName "main.exe"
+#define MyAppAssocName MyAppName + " Setup"
 #define MyAppAssocExt ".myp"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{53F4ECA9-A2DF-487E-A23C-AE4CD895EBDB}
+AppId={{13C769B5-8807-4B91-B21A-252D3C884319}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -34,25 +34,24 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 ChangesAssociations=yes
 DisableProgramGroupPage=yes
-LicenseFile=E:\Useful APPS\WinWidget\InstallReady\LICENSE.txt
-; Remove the following line to run in administrative install mode (install for all users).
-PrivilegesRequired=lowest
-OutputDir=E:\Useful APPS\WinWidget\OutPut
+LicenseFile=E:\Useful APPS\WinWidget\Github Repo\InstallReady\LICENSE.txt
+; Uncomment the following line to run in non administrative install mode (install for current user only).
+;PrivilegesRequired=lowest
+OutputDir=E:\Useful APPS\WinWidget\Github Repo\OutPut
 OutputBaseFilename=WinWidget_Setup
-SetupIconFile=E:\Useful APPS\WinWidget\AppSetup.ico
+SetupIconFile=E:\Useful APPS\WinWidget\Github Repo\AppSetup.ico
 SolidCompression=yes
-WizardStyle=modern zircon
+WizardStyle=classic zircon
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
-Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "E:\Useful APPS\WinWidget\InstallReady\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "E:\Useful APPS\WinWidget\InstallReady\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "E:\Useful APPS\WinWidget\Github Repo\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "E:\Useful APPS\WinWidget\Github Repo\InstallReady\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Registry]
@@ -60,6 +59,7 @@ Root: HKA; Subkey: "Software\Classes\{#MyAppAssocExt}\OpenWithProgids"; ValueTyp
 Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}"; ValueType: string; ValueName: ""; ValueData: "{#MyAppAssocName}"; Flags: uninsdeletekey
 Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},0"
 Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
+Root: HKA; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
