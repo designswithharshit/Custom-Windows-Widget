@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QGraphicsDropShadowEffect, QInputDialog)
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s', handlers=[logging.StreamHandler(sys.stdout)])
 
 # --- CONFIGURATION ---
-CURRENT_VERSION = "4.4"
+CURRENT_VERSION = "4.6"
 UPDATE_URL = "https://raw.githubusercontent.com/designswithharshit/Custom-Windows-Widget/main/version.json"
 APP_NAME = "WinWidget"
 
@@ -813,7 +813,7 @@ class NoteWidget(BaseWidget):
         fmt.addAction("1. Number List", lambda: self.text_edit.textCursor().createList(QTextListFormat.ListDecimal))
         
         # 2. Styling
-        style = m.addMenu("✨ Style Text")
+        style = m.addMenu("Style Text")
         style.addAction("Bold", lambda: self.apply_format('bold'))
         style.addAction("Italic", lambda: self.apply_format('italic'))
         style.addAction("Strikethrough", lambda: self.apply_format('strike'))
@@ -826,7 +826,7 @@ class NoteWidget(BaseWidget):
         style.addAction("Set Exact Size...", self.set_custom_text_size)
 
         # 3. Colors
-        colors = m.addMenu("🎨 Colors")
+        colors = m.addMenu("Colors")
         colors.addAction("Change Text Color", self.change_text_color)
         colors.addAction("Change Background Color", self.change_bg_color)
 
